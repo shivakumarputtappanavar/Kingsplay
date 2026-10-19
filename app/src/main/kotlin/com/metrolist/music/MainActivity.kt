@@ -740,7 +740,7 @@ class MainActivity : FragmentActivity() {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
                     val currentVersion = BuildConfig.BASE_VERSION_NAME
                     if (lastSeenVersion != currentVersion) {
-                        showChangelog.value = true
+                        // Kings Play: changelog popup turned off
                     }
                 }
 
@@ -1074,10 +1074,15 @@ class MainActivity : FragmentActivity() {
                                 Row {
                                     TopAppBar(
                                         title = {
+                                            if (currentTitleRes == R.string.home) {
+                                                // Kings Play: animated thought instead of "Home"
+                                                com.metrolist.music.ui.theme.KingsHomeThought()
+                                            } else {
                                             Text(
                                                 text = currentTitleRes?.let { stringResource(it) } ?: "",
                                                 style = MaterialTheme.typography.titleLarge,
                                             )
+                                            }
                                         },
                                         actions = {
                                             if (showHistoryButton) {

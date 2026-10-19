@@ -201,7 +201,7 @@ fun KingsIntroScreen(icon: KingsAppIcon, onDone: () -> Unit) {
             Spacer(Modifier.height(10.dp))
 
             Text(
-                text = "YOUR SOUND · YOUR WORLD",
+                text = rememberKingsThought(),
                 color = colors.onSurfaceVariant,
                 fontSize = 12.sp,
                 letterSpacing = 4.sp,

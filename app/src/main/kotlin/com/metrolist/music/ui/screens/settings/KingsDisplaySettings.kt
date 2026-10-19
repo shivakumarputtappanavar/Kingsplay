@@ -10,6 +10,15 @@ package com.metrolist.music.ui.screens.settings
 
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.metrolist.music.ui.theme.DefaultKingsThought
+import com.metrolist.music.ui.theme.KingsThoughtKey
+import com.metrolist.music.ui.theme.KingsThoughtMaxLength
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -145,11 +154,34 @@ fun KingsAppIconGroup() {
     val (iconName, onIconNameChange) = rememberPreference(KingsAppIconKey, KingsAppIcon.DEFAULT.name)
     val (soundOn, onSoundOnChange) = rememberPreference(KingsStartupSoundKey, true)
     val (introOn, onIntroOnChange) = rememberPreference(KingsIntroKey, true)
+    val (thought, onThoughtChange) = rememberPreference(KingsThoughtKey, DefaultKingsThought)
+    var editThought by remember { mutableStateOf(false) }
+
+    if (editThought) {
+        ThoughtDialog(
+            current = thought.ifBlank { DefaultKingsThought },
+            onSave = {
+                onThoughtChange(it.trim().ifBlank { DefaultKingsThought })
+                editThought = false
+            },
+            onReset = {
+                onThoughtChange(DefaultKingsThought)
+                editThought = false
+            },
+            onDismiss = { editThought = false },
+        )
+    }
     val selected = KingsAppIcon.from(iconName)
 
     Material3SettingsGroup(
-        title = "App icon & sound",
+        title = "Personalize Kings Play",
         items = listOf(
+            Material3SettingsItem(
+                icon = painterResource(R.drawable.edit),
+                title = { Text("Home thought") },
+                description = { Text("\"${thought.ifBlank { DefaultKingsThought }}\" (shown animated at the top of Home and in the intro)") },
+                onClick = { editThought = true },
+            ),
             Material3SettingsItem(
                 title = { Text("App icon") },
                 description = {
@@ -243,4 +275,40 @@ private fun IconChoice(
             maxLines = 1,
         )
     }
+}
+
+@Composable
+private fun ThoughtDialog(
+    current: String,
+    onSave: (String) -> Unit,
+    onReset: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var value by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Home thought") },
+        text = {
+            Column {
+                Text(
+                    "Shown animated at the top of Home and in the intro.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { if (it.length <= KingsThoughtMaxLength) value = it },
+                    singleLine = true,
+                    placeholder = { Text(DefaultKingsThought) },
+                    supportingText = { Text("${value.length} / $KingsThoughtMaxLength") },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(value) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onReset) { Text("Reset to default") }
+        },
+    )
 }
