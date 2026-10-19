@@ -1,5 +1,6 @@
 /**
  * Metrolist Project (C) 2026
+ * Kings Play changes: Explore and Settings tabs
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -24,6 +25,13 @@ sealed class Screens(
         route = "home"
     )
 
+    object Explore : Screens(
+        titleId = R.string.kp_explore,
+        iconIdInactive = R.drawable.explore_outlined,
+        iconIdActive = R.drawable.explore_outlined,
+        route = "mood_and_genres"
+    )
+
     object Search : Screens(
         titleId = R.string.search,
         iconIdInactive = R.drawable.search,
@@ -45,7 +53,15 @@ sealed class Screens(
         route = "library"
     )
 
+    object Settings : Screens(
+        titleId = R.string.settings,
+        iconIdInactive = R.drawable.settings,
+        iconIdActive = R.drawable.settings,
+        route = "settings"
+    )
+
     companion object {
-        val MainScreens = listOf(Home, Search, ListenTogether, Library)
+        // Kings Play bottom bar: Home, Explore, Search, Library, Settings
+        val MainScreens = listOf(Home, Explore, Search, Library, Settings, ListenTogether)
     }
 }

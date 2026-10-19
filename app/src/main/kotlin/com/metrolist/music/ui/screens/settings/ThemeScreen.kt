@@ -80,6 +80,10 @@ import com.metrolist.music.constants.PureBlackMiniPlayerKey
 import com.metrolist.music.constants.SelectedThemeColorKey
 import com.metrolist.music.ui.theme.DefaultThemeColor
 import com.metrolist.music.ui.theme.MetrolistTheme
+import com.metrolist.music.ui.theme.DefaultKingsStyle
+import com.metrolist.music.ui.theme.KingsStyle
+import com.metrolist.music.ui.theme.KingsStyleControls
+import com.metrolist.music.ui.theme.KingsStyleKey
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 
@@ -132,6 +136,7 @@ fun ThemeScreen(
         DefaultThemeColor.toArgb()
     )
     val (_, onDynamicThemeChange) = rememberPreference(DynamicThemeKey, defaultValue = true)
+    val (_, onKingsStyleChange) = rememberEnumPreference(KingsStyleKey, DefaultKingsStyle)
 
     val selectedThemeColor = Color(selectedThemeColorInt)
     val configuration = LocalConfiguration.current
@@ -140,6 +145,8 @@ fun ThemeScreen(
     // Helper function to handle color selection with dynamic theme toggle
     val handleColorSelection: (Color) -> Unit = { color ->
         onSelectedThemeColorChange(color.toArgb())
+        // Picking a palette color switches Kings Play style to Classic
+        onKingsStyleChange(KingsStyle.CLASSIC)
         // Enable dynamic theme only when selecting the default/dynamic color
         // Disable it when selecting any other color
         val isDynamicColor = color == DefaultThemeColor
@@ -194,10 +201,11 @@ fun PortraitThemeLayout(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding),
+            .padding(innerPadding)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(96.dp))
 
         Box(
             modifier = Modifier
@@ -212,7 +220,11 @@ fun PortraitThemeLayout(
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        KingsStyleControls()
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         ThemeControls(
             darkMode = darkMode,
@@ -271,6 +283,10 @@ fun LandscapeThemeLayout(
                 .verticalScroll(rememberScrollState())
                 .padding(end = 16.dp, top = 16.dp, bottom = 16.dp)
         ) {
+            KingsStyleControls()
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             ThemeControls(
                 darkMode = darkMode,
                 onDarkModeChange = onDarkModeChange,
