@@ -104,8 +104,8 @@ private data class CommunityLink(
 // ===== Kings Play: edit these lines =====
 private const val KINGS_PLAY_VERSION = "1.0"
 private val DEV_NAME = "Shivakumar"
-private val DEV_GITHUB = ""     // your GitHub username, e.g. "shivakumar123" (empty = no button)
-private val DEV_INSTAGRAM = ""  // your Instagram username (empty = no button)
+private val DEV_GITHUB = "ShivakumarPuttappanavar"   // your GitHub username
+private val DEV_INSTAGRAM = "Shivakumar_Puttappanavar"  // your Instagram username
 // ====================================================
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
