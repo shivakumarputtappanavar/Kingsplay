@@ -1680,9 +1680,28 @@ fun BottomSheetPlayer(
                                     Modifier
                                         .height(68.dp)
                                         .weight(playPauseWeight)
+                                        .then(
+                                            if (kingsPremium) {
+                                                // Kings Play: bounce, ring burst and breathing glow
+                                                Modifier.kingsPlayButtonFx(
+                                                    isPlaying = effectiveIsPlaying,
+                                                    pressed = isPlayPausePressed,
+                                                    glowColor = MaterialTheme.colorScheme.primary,
+                                                )
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
                                         .focusRequester(focusRequester),
                             ) {
-                                Row(
+                                if (kingsPremium && !isListenTogetherGuest) {
+                                    // Kings Play: play triangle morphs into pause bars
+                                    KingsPlayPauseIcon(
+                                        isPlaying = effectiveIsPlaying,
+                                        color = iconButtonColor,
+                                        modifier = Modifier.size(36.dp),
+                                    )
+                                } else Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center,
                                 ) {
