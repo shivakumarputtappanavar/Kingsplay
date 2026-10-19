@@ -86,6 +86,10 @@ fun SettingsScreen(
             )
         )
 
+        // Kings Play: refresh rate (60 Hz / 120 Hz)
+        Spacer(modifier = Modifier.height(16.dp))
+        KingsDisplaySettingsGroup()
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Player & Content Section (moved up and combined with content)

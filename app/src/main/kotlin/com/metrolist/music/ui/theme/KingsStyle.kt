@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -59,6 +60,9 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.metrolist.music.ui.player.KingsPlayerStyle
+import com.metrolist.music.ui.player.KingsPlayerStyleKey
+import com.metrolist.music.ui.player.KingsPremiumPlayerKey
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import kotlin.math.PI
@@ -207,6 +211,8 @@ fun LiquidOverlay(
 fun KingsStyleControls(modifier: Modifier = Modifier) {
     val (style, onStyleChange) = rememberEnumPreference(KingsStyleKey, DefaultKingsStyle)
     val (glassOn, onGlassOnChange) = rememberPreference(LiquidGlassKey, true)
+    val (playerStyle, onPlayerStyleChange) = rememberEnumPreference(KingsPlayerStyleKey, KingsPlayerStyle.NORMAL)
+    val (premiumOn, onPremiumOnChange) = rememberPreference(KingsPremiumPlayerKey, true)
     val (liquidOn, onLiquidOnChange) = rememberPreference(LiquidEffectKey, false)
     val (strength, onStrengthChange) = rememberPreference(LiquidStrengthKey, DefaultLiquidStrength)
     val (speed, onSpeedChange) = rememberPreference(LiquidSpeedKey, DefaultLiquidSpeed)
@@ -270,6 +276,51 @@ fun KingsStyleControls(modifier: Modifier = Modifier) {
                     )
                 }
                 Switch(checked = glassOn, onCheckedChange = onGlassOnChange)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Premium player",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Clean white buttons, thin slider, clean song titles, tap feel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = premiumOn, onCheckedChange = onPremiumOnChange)
+            }
+
+            // Player style: Normal / Album cover / Vinyl / Turntable
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Player style",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "How the song looks on the full player screen",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                KingsPlayerStyle.entries.chunked(2).forEach { pair ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        pair.forEach { option ->
+                            PlayerStyleOption(
+                                text = option.label,
+                                selected = option == playerStyle,
+                                onClick = { onPlayerStyleChange(option) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
             }
 
             Row(
@@ -390,5 +441,35 @@ private fun LabeledSlider(
             Box(modifier = Modifier.weight(1f))
             Text(rightHint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+@Composable
+private fun PlayerStyleOption(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) colors.primary.copy(alpha = 0.22f) else colors.surfaceContainerHighest)
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) colors.primary else colors.outlineVariant,
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) colors.primary else colors.onSurface
+        )
     }
 }

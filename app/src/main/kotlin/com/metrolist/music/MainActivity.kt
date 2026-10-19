@@ -577,7 +577,13 @@ class MainActivity : FragmentActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val layoutParams = window.attributes
                 if (enableHighRefreshRate) {
-                    layoutParams.preferredDisplayModeId = 0
+                    // Kings Play: pick the fastest mode at the current resolution (e.g. 120 Hz)
+                    val kpDisplay = window.windowManager.defaultDisplay
+                    val kpCurrent = kpDisplay.mode
+                    val kpFastest = kpDisplay.supportedModes
+                        .filter { it.physicalWidth == kpCurrent.physicalWidth && it.physicalHeight == kpCurrent.physicalHeight }
+                        .maxByOrNull { it.refreshRate }
+                    layoutParams.preferredDisplayModeId = kpFastest?.modeId ?: 0
                 } else {
                     val modes = window.windowManager.defaultDisplay.supportedModes
                     val mode60 =
@@ -592,7 +598,7 @@ class MainActivity : FragmentActivity() {
             } else {
                 val params = window.attributes
                 if (enableHighRefreshRate) {
-                    params.preferredRefreshRate = 0f
+                    params.preferredRefreshRate = window.windowManager.defaultDisplay.supportedRefreshRates.maxOrNull() ?: 0f
                 } else {
                     params.preferredRefreshRate = 60f
                 }

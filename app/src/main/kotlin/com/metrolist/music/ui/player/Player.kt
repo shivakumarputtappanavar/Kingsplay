@@ -1,5 +1,6 @@
 /**
  * Metrolist Project (C) 2026
+ * Kings Play changes: player styles (album cover, vinyl, turntable), premium player
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -26,6 +27,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
@@ -234,14 +237,26 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    val playerBackground by rememberEnumPreference(
+    val playerBackgroundPref by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
         defaultValue = PlayerBackgroundStyle.DEFAULT,
     )
-    val playerButtonsStyle by rememberEnumPreference(
+    // Kings Play: player style (Normal / Album cover / Vinyl / Turntable)
+    val kingsPlayerStyle by rememberEnumPreference(KingsPlayerStyleKey, KingsPlayerStyle.NORMAL)
+    val kingsCustomArt = kingsPlayerStyle != KingsPlayerStyle.NORMAL
+    // Kings styles use the blur style's colors (white text on a dark, colorful background)
+    val playerBackground = if (kingsCustomArt) PlayerBackgroundStyle.BLUR else playerBackgroundPref
+    val playerButtonsStylePref by rememberEnumPreference(
         key = PlayerButtonsStyleKey,
         defaultValue = PlayerButtonsStyle.DEFAULT,
     )
+    // Kings Play: premium player (calm white/glass buttons, thin slider, clean titles, tap feel)
+    val kingsPremium by rememberPreference(KingsPremiumPlayerKey, true)
+    val playerButtonsStyle = if (kingsPremium) PlayerButtonsStyle.DEFAULT else playerButtonsStylePref
+    val kingsHaptics = LocalHapticFeedback.current
+    val kingsTapHaptic: () -> Unit = {
+        if (kingsPremium) kingsHaptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+    }
 
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
@@ -326,7 +341,8 @@ fun BottomSheetPlayer(
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
     val isMuted by playerConnection.isMuted.collectAsStateWithLifecycle()
 
-    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    val sliderStylePref by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
+    val sliderStyle = if (kingsPremium) SliderStyle.SLIM else sliderStylePref
     val squigglySlider by rememberPreference(SquigglySliderKey, defaultValue = false)
 
     // Listen Together state (reactive)
@@ -841,7 +857,12 @@ fun BottomSheetPlayer(
                         .background(bottomSheetBackgroundColor),
             ) {
                 when (playerBackground) {
-                    PlayerBackgroundStyle.BLUR -> {
+                    PlayerBackgroundStyle.BLUR -> if (kingsPlayerStyle == KingsPlayerStyle.ALBUM_COVER) {
+                        KingsCoverBackground(
+                            thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                            alpha = backgroundAlpha,
+                        )
+                    } else {
                         AnimatedContent(
                             targetState = mediaMetadata?.thumbnailUrl,
                             transitionSpec = {
@@ -996,19 +1017,31 @@ fun BottomSheetPlayer(
                 ) {
                     AnimatedContent(
                         targetState = mediaMetadata.title,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        transitionSpec = {
+                            if (kingsPremium) {
+                                // Kings Play: new title slides up softly
+                                (fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 3 })
+                                    .togetherWith(fadeOut(tween(200)) + slideOutVertically(tween(200)) { -it / 3 })
+                            } else {
+                                fadeIn() togetherWith fadeOut()
+                            }
+                        },
                         label = "",
                     ) { title ->
                         Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
+                            text = if (kingsPremium) cleanSongTitle(title) else title,
+                            style = if (kingsPremium) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge,
+                            fontWeight = if (kingsPremium) FontWeight.ExtraBold else FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = TextBackgroundColor,
                             modifier =
                                 Modifier
-                                    .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                    .basicMarquee(
+                                        iterations = if (kingsPremium) Int.MAX_VALUE else 1,
+                                        initialDelayMillis = if (kingsPremium) 2000 else 3000,
+                                        velocity = 30.dp,
+                                    )
                                     .combinedClickable(
                                         enabled = true,
                                         indication = null,
@@ -1632,6 +1665,7 @@ fun BottomSheetPlayer(
                                         playerConnection.player.seekTo(0, 0)
                                         playerConnection.player.playWhenReady = true
                                     } else {
+                                        kingsTapHaptic()
                                         playerConnection.togglePlayPause()
                                     }
                                 },
@@ -1775,6 +1809,7 @@ fun BottomSheetPlayer(
                                                 playerConnection.player.seekTo(0, 0)
                                                 playerConnection.player.playWhenReady = true
                                             } else {
+                                                kingsTapHaptic()
                                                 playerConnection.player.togglePlayPause()
                                             }
                                         }
@@ -1947,12 +1982,29 @@ fun BottomSheetPlayer(
                                     positionProvider = { effectivePosition },
                                 )
                             } else {
-                                Thumbnail(
-                                    sliderPositionProvider = sliderPositionProvider,
-                                    modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
-                                    isPlayerExpanded = isExpandedProvider,
-                                    isListenTogetherGuest = isListenTogetherGuest,
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Thumbnail(
+                                        sliderPositionProvider = sliderPositionProvider,
+                                        // Kings Play: with a Kings style the normal cover is hidden,
+                                        // but it stays in place so swiping to change songs still works
+                                        modifier = Modifier
+                                            .nestedScroll(state.preUpPostDownNestedScrollConnection)
+                                            .then(if (kingsCustomArt) Modifier.alpha(0f) else Modifier),
+                                        isPlayerExpanded = isExpandedProvider,
+                                        isListenTogetherGuest = isListenTogetherGuest,
+                                    )
+                                    when (kingsPlayerStyle) {
+                                        KingsPlayerStyle.VINYL -> KingsVinylArt(
+                                            thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                                            isPlaying = isPlaying,
+                                        )
+                                        KingsPlayerStyle.TURNTABLE -> KingsTurntableArt(
+                                            thumbnailUrl = mediaMetadata?.thumbnailUrl,
+                                            isPlaying = isPlaying,
+                                        )
+                                        else -> {}
+                                    }
+                                }
                             }
                         }
                     }
