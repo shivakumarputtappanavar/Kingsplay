@@ -2,13 +2,28 @@
  * Kings Play — based on Metrolist (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  *
- * Main Settings: "Display" group with a 60 Hz / 120 Hz refresh rate choice.
+ * Main Settings: "Display" group (60 Hz / 120 Hz) and "App icon & sound" group.
  * Uses Metrolist's existing high-refresh-rate setting, so both places stay in sync.
  */
 
 package com.metrolist.music.ui.screens.settings
 
 import android.os.Build
+import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Switch
+import androidx.compose.ui.layout.ContentScale
+import com.metrolist.music.utils.KingsAppIcon
+import com.metrolist.music.utils.KingsAppIconKey
+import com.metrolist.music.utils.KingsAppIcons
+import com.metrolist.music.utils.KingsStartupSoundKey
+import com.metrolist.music.utils.KingsIntroKey
+import com.metrolist.music.utils.KingsIntroState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -116,6 +131,116 @@ private fun HzOption(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             color = if (selected) colors.primary else colors.onSurface,
+        )
+    }
+}
+
+// ============================================================================
+// Kings Play: App icon (3 logos) + startup sound — shown at the end of Settings
+// ============================================================================
+
+@Composable
+fun KingsAppIconGroup() {
+    val context = LocalContext.current
+    val (iconName, onIconNameChange) = rememberPreference(KingsAppIconKey, KingsAppIcon.DEFAULT.name)
+    val (soundOn, onSoundOnChange) = rememberPreference(KingsStartupSoundKey, true)
+    val (introOn, onIntroOnChange) = rememberPreference(KingsIntroKey, true)
+    val selected = KingsAppIcon.from(iconName)
+
+    Material3SettingsGroup(
+        title = "App icon & sound",
+        items = listOf(
+            Material3SettingsItem(
+                title = { Text("App icon") },
+                description = {
+                    Column {
+                        Text("Choose your Kings Play logo. The home screen may take a few seconds to update.")
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            KingsAppIcon.entries.forEach { icon ->
+                                IconChoice(
+                                    icon = icon,
+                                    selected = icon == selected,
+                                    onClick = {
+                                        if (icon != selected) {
+                                            onIconNameChange(icon.name)
+                                            KingsAppIcons.apply(context, icon)
+                                            if (soundOn) KingsAppIcons.playSound(context, icon, force = true)
+                                            Toast.makeText(context, "${icon.label} icon set", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                },
+            ),
+            Material3SettingsItem(
+                icon = painterResource(R.drawable.volume_up),
+                title = { Text("Startup sound") },
+                description = { Text("Plays the logo's sound when Kings Play opens (not on silent, not while music plays)") },
+                trailingContent = {
+                    Switch(checked = soundOn, onCheckedChange = onSoundOnChange)
+                },
+            ),
+            Material3SettingsItem(
+                icon = painterResource(R.drawable.palette),
+                title = { Text("Intro animation") },
+                description = { Text("Animated logo and name when Kings Play opens (tap to skip)") },
+                trailingContent = {
+                    Switch(checked = introOn, onCheckedChange = onIntroOnChange)
+                },
+            ),
+            Material3SettingsItem(
+                icon = painterResource(R.drawable.play),
+                title = { Text("Preview intro") },
+                description = { Text("See and hear the ${selected.label} intro") },
+                onClick = {
+                    KingsIntroState.icon = selected
+                    KingsAppIcons.playSound(context, selected, force = true)
+                },
+            ),
+        )
+    )
+}
+
+@Composable
+private fun IconChoice(
+    icon: KingsAppIcon,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+    ) {
+        Image(
+            painter = painterResource(icon.preview),
+            contentDescription = icon.label,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(18.dp))
+                .border(
+                    width = if (selected) 3.dp else 1.dp,
+                    color = if (selected) colors.primary else colors.outlineVariant,
+                    shape = RoundedCornerShape(18.dp),
+                ),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = icon.label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) colors.primary else colors.onSurfaceVariant,
+            maxLines = 1,
         )
     }
 }

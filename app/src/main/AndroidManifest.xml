@@ -190,6 +190,35 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Kings Play: extra app icons (switched in Settings > App icon & sound) -->
+        <activity-alias
+            android:name=".KingsIconRoyal"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/kp_icon_royal"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/kp_icon_royal"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".KingsIconChess"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/kp_icon_chess"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/kp_icon_chess"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <activity
             android:name=".discord.DiscordOAuthActivity"
             android:exported="true"

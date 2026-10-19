@@ -1,6 +1,6 @@
 /**
  * Metrolist Project (C) 2026
- * Kings Play changes: Kings Play styles + optional liquid effect
+ * Kings Play changes: Kings Play styles, optional liquid effect, animated intro
  * Licensed under GPL-3.0 | See git history for contributors
  */
 
@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -83,9 +84,13 @@ fun MetrolistTheme(
         }
     }
 
+    // Kings Play: only the outermost theme shows the animated intro
+    val isOuterTheme = !LocalInsideKingsTheme.current
+
     MaterialTheme(
         colorScheme = colorScheme,
     ) {
+        CompositionLocalProvider(LocalInsideKingsTheme provides true) {
         Box {
             content()
             if (liquidOn) {
@@ -102,6 +107,10 @@ fun MetrolistTheme(
                     dark = darkTheme,
                 )
             }
+            if (isOuterTheme) {
+                KingsIntroHost()
+            }
+        }
         }
     }
 }

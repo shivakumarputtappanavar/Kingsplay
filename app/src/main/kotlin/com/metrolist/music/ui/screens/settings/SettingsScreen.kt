@@ -270,6 +270,10 @@ fun SettingsScreen(
             ReleaseNotesCard()
         }
 
+        // Kings Play: app icon + startup sound
+        Spacer(modifier = Modifier.height(16.dp))
+        KingsAppIconGroup()
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 
