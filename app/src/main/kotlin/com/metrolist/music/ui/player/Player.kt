@@ -29,6 +29,12 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.graphicsLayer
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.metrolist.music.ui.theme.LiquidGlassKey
+import com.metrolist.music.ui.theme.kingsGlass
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
@@ -254,6 +260,10 @@ fun BottomSheetPlayer(
     val kingsPremium by rememberPreference(KingsPremiumPlayerKey, true)
     val playerButtonsStyle = if (kingsPremium) PlayerButtonsStyle.DEFAULT else playerButtonsStylePref
     val kingsHaptics = LocalHapticFeedback.current
+    // Kings Play: round liquid-glass player buttons (glass shows the player's own background)
+    val kingsGlassPref by rememberPreference(LiquidGlassKey, true)
+    val kingsGlassButtons = kingsPremium && kingsGlassPref
+    val kingsPlayerBackdrop = rememberLayerBackdrop()
     val kingsTapHaptic: () -> Unit = {
         if (kingsPremium) kingsHaptics.performHapticFeedback(HapticFeedbackType.ContextClick)
     }
@@ -854,7 +864,8 @@ fun BottomSheetPlayer(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(bottomSheetBackgroundColor),
+                        .background(bottomSheetBackgroundColor)
+                        .layerBackdrop(kingsPlayerBackdrop),
             ) {
                 when (playerBackground) {
                     PlayerBackgroundStyle.BLUR -> if (kingsPlayerStyle == KingsPlayerStyle.ALBUM_COVER) {
@@ -1625,6 +1636,18 @@ fun BottomSheetPlayer(
                                 label = "nextButtonWeight",
                             )
 
+                            // Kings Play: side buttons squeeze a little when pressed
+                            val kpBackScale by animateFloatAsState(
+                                targetValue = if (isBackPressed) 0.88f else 1f,
+                                animationSpec = spring(dampingRatio = 0.45f, stiffness = 500f),
+                                label = "kpBackScale",
+                            )
+                            val kpNextScale by animateFloatAsState(
+                                targetValue = if (isNextPressed) 0.88f else 1f,
+                                animationSpec = spring(dampingRatio = 0.45f, stiffness = 500f),
+                                label = "kpNextScale",
+                            )
+
                             FilledIconButton(
                                 onClick = playerConnection::seekToPrevious,
                                 enabled = canSkipPrevious && !isListenTogetherGuest,
@@ -1632,13 +1655,38 @@ fun BottomSheetPlayer(
                                 interactionSource = backInteractionSource,
                                 colors =
                                     IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = sideButtonContainerColor,
-                                        contentColor = sideButtonContentColor,
+                                        containerColor = if (kingsGlassButtons) Color.Transparent else sideButtonContainerColor,
+                                        contentColor = if (kingsGlassButtons) Color.White else sideButtonContentColor,
                                     ),
                                 modifier =
                                     Modifier
-                                        .height(68.dp)
-                                        .weight(backButtonWeight),
+                                        .then(
+                                            if (kingsPremium) {
+                                                Modifier
+                                                    .size(72.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = kpBackScale
+                                                        scaleY = kpBackScale
+                                                    }
+                                                    .then(
+                                                        if (kingsGlassButtons) {
+                                                            Modifier.kingsGlass(
+                                                                backdrop = kingsPlayerBackdrop,
+                                                                shape = CircleShape,
+                                                                surface = Color.White,
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                dark = true,
+                                                            )
+                                                        } else {
+                                                            Modifier
+                                                        }
+                                                    )
+                                            } else {
+                                                Modifier
+                                                    .height(68.dp)
+                                                    .weight(backButtonWeight)
+                                            }
+                                        ),
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.skip_previous),
@@ -1647,7 +1695,7 @@ fun BottomSheetPlayer(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(if (kingsPremium) 22.dp else 8.dp))
 
                             FilledIconButton(
                                 onClick = {
@@ -1673,23 +1721,39 @@ fun BottomSheetPlayer(
                                 interactionSource = playPauseInteractionSource,
                                 colors =
                                     IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = textButtonColor,
-                                        contentColor = iconButtonColor,
+                                        containerColor = if (kingsGlassButtons) Color.Transparent else textButtonColor,
+                                        contentColor = if (kingsGlassButtons) Color.White else iconButtonColor,
                                     ),
                                 modifier =
                                     Modifier
-                                        .height(68.dp)
-                                        .weight(playPauseWeight)
                                         .then(
                                             if (kingsPremium) {
-                                                // Kings Play: bounce, ring burst and breathing glow
-                                                Modifier.kingsPlayButtonFx(
-                                                    isPlaying = effectiveIsPlaying,
-                                                    pressed = isPlayPausePressed,
-                                                    glowColor = MaterialTheme.colorScheme.primary,
-                                                )
+                                                // Kings Play: same round size as next/previous,
+                                                // with bounce, ring burst, breathing glow and liquid glass
+                                                Modifier
+                                                    .size(72.dp)
+                                                    .kingsPlayButtonFx(
+                                                        isPlaying = effectiveIsPlaying,
+                                                        pressed = isPlayPausePressed,
+                                                        glowColor = MaterialTheme.colorScheme.primary,
+                                                    )
+                                                    .then(
+                                                        if (kingsGlassButtons) {
+                                                            Modifier.kingsGlass(
+                                                                backdrop = kingsPlayerBackdrop,
+                                                                shape = CircleShape,
+                                                                surface = Color.White,
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                dark = false,
+                                                            )
+                                                        } else {
+                                                            Modifier
+                                                        }
+                                                    )
                                             } else {
                                                 Modifier
+                                                    .height(68.dp)
+                                                    .weight(playPauseWeight)
                                             }
                                         )
                                         .focusRequester(focusRequester),
@@ -1698,8 +1762,8 @@ fun BottomSheetPlayer(
                                     // Kings Play: play triangle morphs into pause bars
                                     KingsPlayPauseIcon(
                                         isPlaying = effectiveIsPlaying,
-                                        color = iconButtonColor,
-                                        modifier = Modifier.size(36.dp),
+                                        color = if (kingsGlassButtons) Color.White else iconButtonColor,
+                                        modifier = Modifier.size(34.dp),
                                     )
                                 } else Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -1735,7 +1799,7 @@ fun BottomSheetPlayer(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(if (kingsPremium) 22.dp else 8.dp))
 
                             FilledIconButton(
                                 onClick = playerConnection::seekToNext,
@@ -1744,13 +1808,38 @@ fun BottomSheetPlayer(
                                 interactionSource = nextInteractionSource,
                                 colors =
                                     IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = sideButtonContainerColor,
-                                        contentColor = sideButtonContentColor,
+                                        containerColor = if (kingsGlassButtons) Color.Transparent else sideButtonContainerColor,
+                                        contentColor = if (kingsGlassButtons) Color.White else sideButtonContentColor,
                                     ),
                                 modifier =
                                     Modifier
-                                        .height(68.dp)
-                                        .weight(nextButtonWeight),
+                                        .then(
+                                            if (kingsPremium) {
+                                                Modifier
+                                                    .size(72.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = kpNextScale
+                                                        scaleY = kpNextScale
+                                                    }
+                                                    .then(
+                                                        if (kingsGlassButtons) {
+                                                            Modifier.kingsGlass(
+                                                                backdrop = kingsPlayerBackdrop,
+                                                                shape = CircleShape,
+                                                                surface = Color.White,
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                dark = true,
+                                                            )
+                                                        } else {
+                                                            Modifier
+                                                        }
+                                                    )
+                                            } else {
+                                                Modifier
+                                                    .height(68.dp)
+                                                    .weight(nextButtonWeight)
+                                            }
+                                        ),
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.skip_next),
