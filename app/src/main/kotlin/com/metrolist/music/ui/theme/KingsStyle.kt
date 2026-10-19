@@ -206,6 +206,7 @@ fun LiquidOverlay(
 @Composable
 fun KingsStyleControls(modifier: Modifier = Modifier) {
     val (style, onStyleChange) = rememberEnumPreference(KingsStyleKey, DefaultKingsStyle)
+    val (glassOn, onGlassOnChange) = rememberPreference(LiquidGlassKey, true)
     val (liquidOn, onLiquidOnChange) = rememberPreference(LiquidEffectKey, false)
     val (strength, onStrengthChange) = rememberPreference(LiquidStrengthKey, DefaultLiquidStrength)
     val (speed, onSpeedChange) = rememberPreference(LiquidSpeedKey, DefaultLiquidSpeed)
@@ -258,7 +259,26 @@ fun KingsStyleControls(modifier: Modifier = Modifier) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Liquid effect",
+                        text = "Liquid glass",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "iPhone-style see-through glass bottom bar",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = glassOn, onCheckedChange = onGlassOnChange)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Liquid glow",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -289,7 +309,7 @@ fun KingsStyleControls(modifier: Modifier = Modifier) {
                     onValueChange = onSpeedChange
                 )
                 Text(
-                    text = "Tip: the liquid effect uses a little more battery.",
+                    text = "Tip: the liquid glow uses a little more battery.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

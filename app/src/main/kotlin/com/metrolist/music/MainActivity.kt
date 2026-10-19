@@ -198,6 +198,9 @@ import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.ui.theme.ColorSaver
 import com.metrolist.music.ui.theme.DefaultThemeColor
 import com.metrolist.music.ui.theme.MetrolistTheme
+import com.metrolist.music.ui.theme.LocalKingsBackdrop
+import com.metrolist.music.ui.theme.rememberKingsBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import com.metrolist.music.ui.theme.extractThemeColor
 import com.metrolist.music.ui.utils.appBarScrollBehavior
 import com.metrolist.music.ui.utils.resetHeightOffset
@@ -1033,6 +1036,7 @@ class MainActivity : FragmentActivity() {
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
                 val artistNameAliases by ArtistNameAliases.aliases.collectAsStateWithLifecycle()
 
+                val kingsBackdrop = rememberKingsBackdrop()
                 CompositionLocalProvider(
                     LocalDatabase provides database,
                     LocalNavController provides navController,
@@ -1045,6 +1049,7 @@ class MainActivity : FragmentActivity() {
                     LocalListenTogetherManager provides listenTogetherManager,
                     LocalChangelogState provides showChangelog,
                     LocalArtistNameAliases provides artistNameAliases,
+                    LocalKingsBackdrop provides kingsBackdrop,
                 ) {
                     if (showChangelog.value) {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
@@ -1388,7 +1393,7 @@ class MainActivity : FragmentActivity() {
                                             slideOutHorizontally { it / 8 } + fadeOut(tween(200))
                                         }
                                     },
-                                    modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+                                    modifier = Modifier.layerBackdrop(kingsBackdrop).nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                                 ) {
                                     navigationBuilder(
                                         navController = navController,

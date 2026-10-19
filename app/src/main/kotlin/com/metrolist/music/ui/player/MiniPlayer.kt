@@ -1,5 +1,6 @@
 /**
  * Metrolist Project (C) 2026
+ * Kings Play changes: optional liquid glass mini player
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * Performance optimized MiniPlayer - prevents unnecessary recomposition
@@ -82,6 +83,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import coil3.compose.AsyncImage
+import com.metrolist.music.ui.theme.LocalKingsBackdrop
+import com.metrolist.music.ui.theme.kingsGlass
+import com.metrolist.music.ui.theme.rememberLiquidGlassEnabled
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
@@ -302,6 +306,11 @@ private fun NewMiniPlayer(
     val onSurfaceColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.onSurface
     val errorColor = if (forceLightColors) Color(0xFFFF6B6B) else MaterialTheme.colorScheme.error
 
+    // Kings Play: liquid glass mini player (same glass as the bottom bar)
+    val kingsBackdrop = LocalKingsBackdrop.current
+    val useGlass = rememberLiquidGlassEnabled() && kingsBackdrop != null
+    val glassShape = RoundedCornerShape(32.dp)
+
     Box(
         modifier =
             modifier
@@ -379,16 +388,31 @@ private fun NewMiniPlayer(
                     .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
                     .height(64.dp)
                     .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(color = backgroundColor)
-                    .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
+                    .then(
+                        if (useGlass) {
+                            Modifier
+                                .kingsGlass(
+                                    backdrop = kingsBackdrop!!,
+                                    shape = glassShape,
+                                    surface = MaterialTheme.colorScheme.surfaceContainer,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    dark = useDarkTheme,
+                                )
+                                .clip(glassShape)
+                        } else {
+                            Modifier
+                                .clip(RoundedCornerShape(32.dp))
+                                .background(color = backgroundColor)
+                                .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
+                        }
+                    )
                     .clickable(
                         interactionSource = interactionSource,
                         indication = LocalIndication.current,
                         onClick = onClick
                     ),
         ) {
-            when (miniPlayerBackground) {
+            when (if (useGlass) MiniPlayerBackgroundStyle.DEFAULT else miniPlayerBackground) {
                 MiniPlayerBackgroundStyle.BLUR -> {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                         mediaMetadata?.thumbnailUrl?.let { url ->

@@ -261,6 +261,7 @@ dependencies {
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)
+    implementation("io.github.kyant0:backdrop:1.0.6") // Kings Play liquid glass
     implementation(libs.compose.ui.util)
     implementation(libs.compose.animation)
     implementation(libs.compose.reorderable)
