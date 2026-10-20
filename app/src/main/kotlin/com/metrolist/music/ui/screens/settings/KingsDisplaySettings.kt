@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Switch
+import com.metrolist.music.ui.component.KingsLiquidSwitch as Switch
 import androidx.compose.ui.layout.ContentScale
 import com.metrolist.music.utils.KingsAppIcon
 import com.metrolist.music.utils.KingsAppIconKey
