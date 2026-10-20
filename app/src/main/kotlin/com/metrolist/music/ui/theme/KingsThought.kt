@@ -3,7 +3,7 @@
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * Animated "thought" shown instead of the "Home" title (default: ONE WORLD. ONE BEAT).
- * Words rise in one by one, then a soft color shine keeps flowing through the text.
+ * Words rise in one by one, then a soft color shine flows through the text twice.
  * Users can change the text in Settings.
  */
 
@@ -59,22 +59,20 @@ fun KingsHomeThought(modifier: Modifier = Modifier) {
 
     // Words appear one by one every time Home opens or the text changes
     val appear = remember(text) { Animatable(0f) }
+    val shineAnim = remember(text) { Animatable(0f) }
     LaunchedEffect(text) {
         appear.snapTo(0f)
+        shineAnim.snapTo(0f)
         appear.animateTo(1f, tween(durationMillis = 450 + words.size * 160, easing = LinearEasing))
+        // Shine flows through twice, then rests (saves battery)
+        shineAnim.animateTo(2f, tween(durationMillis = 5200, easing = LinearEasing))
     }
 
-    // Soft shine that keeps flowing through the letters
-    val shine by rememberInfiniteTransition(label = "kpThought").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(3600, easing = LinearEasing), RepeatMode.Restart),
-        label = "kpThoughtShine",
-    )
+    val shine = shineAnim.value % 1f
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 2500),
+        modifier = modifier.basicMarquee(iterations = 3, initialDelayMillis = 2500),
     ) {
         words.forEachIndexed { i, word ->
             val total = words.size.coerceAtLeast(1)

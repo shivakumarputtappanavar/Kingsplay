@@ -158,24 +158,15 @@ fun LiquidOverlay(
     speed: Float,
     dark: Boolean,
 ) {
-    val durationMs = (28000f / speed.coerceIn(0.25f, 3f)).toInt()
-    key(durationMs) {
-        val transition = rememberInfiniteTransition(label = "kingsLiquid")
-        val progress = transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMs, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-            label = "kingsLiquidProgress",
-        )
-
+    // Slow drift: 30 updates a second is plenty and saves a lot of battery
+    val durationSec = 28f / speed.coerceIn(0.25f, 3f)
+    val clock = rememberKingsSlowClock(fps = 30)
+    run {
         val alpha = (if (dark) 0.10f else 0.06f) + (if (dark) 0.22f else 0.12f) * strength.coerceIn(0f, 1f)
         val blend = if (dark) BlendMode.Screen else BlendMode.SrcOver
 
         Canvas(modifier = modifier) {
-            val a = progress.value * 2f * PI.toFloat()
+            val a = ((clock.value / durationSec) % 1f) * 2f * PI.toFloat()
             val w = size.width
             val h = size.height
             val base = max(w, h) * 0.50f

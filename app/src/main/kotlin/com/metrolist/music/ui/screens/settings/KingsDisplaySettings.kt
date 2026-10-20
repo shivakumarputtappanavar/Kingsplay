@@ -89,8 +89,8 @@ fun KingsDisplaySettingsGroup() {
                     Text(
                         when {
                             !supportsHigh -> "This phone runs at 60 Hz"
-                            highRefresh -> "Extra smooth at $maxHz Hz (uses a bit more battery)"
-                            else -> "Smooth 60 Hz, saves battery"
+                            highRefresh -> "Smart $maxHz Hz: ultra smooth while you touch and scroll, 60 Hz when idle to save battery"
+                            else -> "Steady 60 Hz: smooth and saves the most battery"
                         }
                     )
                 },

@@ -76,8 +76,8 @@ fun KingsIntroScreen(icon: KingsAppIcon, onDone: () -> Unit) {
     LaunchedEffect(icon) {
         progress.snapTo(0f)
         exit.snapTo(1f)
-        progress.animateTo(1f, tween(durationMillis = 2400, easing = LinearEasing))
-        exit.animateTo(0f, tween(durationMillis = 450))
+        progress.animateTo(1f, tween(durationMillis = 1600, easing = LinearEasing))
+        exit.animateTo(0f, tween(durationMillis = 300))
         onDone()
     }
 

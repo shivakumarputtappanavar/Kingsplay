@@ -86,7 +86,7 @@ fun Modifier.kingsGlass(
                 lens(
                     refractionHeight = 18f.dp.toPx(),
                     refractionAmount = 34f.dp.toPx(),
-                    chromaticAberration = true,
+                    chromaticAberration = false,
                 )
             }
         },

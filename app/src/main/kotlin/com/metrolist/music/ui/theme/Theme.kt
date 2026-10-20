@@ -91,7 +91,11 @@ fun MetrolistTheme(
         colorScheme = colorScheme,
     ) {
         CompositionLocalProvider(LocalInsideKingsTheme provides true) {
-        Box {
+        // Kings Play: Smart 120 Hz / steady 60 Hz (only once, at the top of the app)
+        if (isOuterTheme) {
+            KingsSmartRefresh()
+        }
+        Box(modifier = if (isOuterTheme) Modifier.kingsTouchWatcher() else Modifier) {
             content()
             if (liquidOn) {
                 LiquidOverlay(

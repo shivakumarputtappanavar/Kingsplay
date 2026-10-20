@@ -112,6 +112,9 @@ object KingsAppIcons {
         val prefs = runCatching { runBlocking { appContext.dataStore.data.first() } }.getOrNull()
         val icon = KingsAppIcon.from(prefs?.get(KingsAppIconKey))
         if (prefs?.get(KingsIntroKey) != false) KingsIntroState.icon = icon
-        if (prefs?.get(KingsStartupSoundKey) != false) playSound(appContext, icon)
+        if (prefs?.get(KingsStartupSoundKey) != false) {
+            // Load the sound in the background so the app opens instantly
+            kotlin.concurrent.thread(name = "kp-startup-sound") { playSound(appContext, icon) }
+        }
     }
 }

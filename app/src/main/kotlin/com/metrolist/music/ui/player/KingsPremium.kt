@@ -136,19 +136,14 @@ fun Modifier.kingsPlayButtonFx(
         }
     }
 
-    // Breathing glow while playing
+    // Soft glow while playing
     val glowStrength by animateFloatAsState(
         targetValue = if (isPlaying) 1f else 0f,
         animationSpec = tween(500),
         label = "kpGlowOn",
     )
-    val breathing = rememberInfiniteTransition(label = "kpGlowBreath")
-    val breath by breathing.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "kpGlowBreathValue",
-    )
+    // Steady glow (a never-ending animation would redraw the screen all the time)
+    val breath = 0.8f
 
     return this
         .graphicsLayer {

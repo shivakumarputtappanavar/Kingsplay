@@ -90,6 +90,10 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
         KingsDisplaySettingsGroup()
 
+        // Kings Play: Sound (Dolby Atmos)
+        Spacer(modifier = Modifier.height(16.dp))
+        KingsSoundSettingsGroup()
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Player & Content Section (moved up and combined with content)
