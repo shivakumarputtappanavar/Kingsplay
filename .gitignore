@@ -117,3 +117,7 @@ app/src/main/cpp/coverart/
 .cortexkit
 .mcp.json
 *.har
+
+*.keystore
+*.jks
+*.ps1

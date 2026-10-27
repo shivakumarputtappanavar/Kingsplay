@@ -61,7 +61,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** The version of THIS build. Change it before every new release. */
-const val KingsPlayVersion = "1.3"
+const val KingsPlayVersion = "1.2"
 
 private const val KingsReleasesApi =
     "https://api.github.com/repos/ShivakumarPuttappanavar/Kingsplay/releases/latest"

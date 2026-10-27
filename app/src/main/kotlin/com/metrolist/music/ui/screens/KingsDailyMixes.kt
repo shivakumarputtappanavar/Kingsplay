@@ -919,12 +919,7 @@ fun KingsJoshScreen(navController: NavController) {
                     }
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
-                Text(
-                    "Josh v17 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),
-                )
+                Spacer(Modifier.height(8.dp)) // Kings Play: version line removed (Josh v18)
             }
         }
 
