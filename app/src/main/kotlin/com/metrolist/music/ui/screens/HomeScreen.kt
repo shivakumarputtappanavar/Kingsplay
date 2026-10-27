@@ -201,6 +201,11 @@ sealed class HomeSection(
     ) : HomeSection("home_page_section_$index", 10)
 
     data object MoodAndGenres : HomeSection("mood_and_genres", 5)
+
+    // Kings Play: new Home sections
+    data object KingsRecents : HomeSection("kings_recents", 95)
+
+    data object KingsListenTogether : HomeSection("kings_listen_together", 15)
 }
 
 @Composable
@@ -693,6 +698,7 @@ fun HomeScreen(
     val accountImageUrl by viewModel.accountImageUrl.collectAsStateWithLifecycle()
     val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val (randomizeHomeOrder) = rememberPreference(RandomizeHomeOrderKey, true)
+    val kingsHomeOrder = rememberPreference(KingsHomeOrderKey, "").value
     val autoRadioQueue by rememberPreference(AutoRadioQueueKey, defaultValue = true)
 
     LaunchedEffect(Unit) { viewModel.loadHomeData() }
@@ -1025,6 +1031,7 @@ fun HomeScreen(
 
     val homeSections =
         remember(
+            kingsHomeOrder,
             randomizeHomeOrder,
             randomSeed,
             selectedChip,
@@ -1041,6 +1048,10 @@ fun HomeScreen(
         ) {
             val list = mutableListOf<HomeSection>()
             val chipActive = selectedChip != null
+            if (!chipActive) {
+                list.add(HomeSection.KingsRecents)
+                list.add(HomeSection.KingsListenTogether)
+            }
 
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
             if (!chipActive && quickPicks?.isNotEmpty() == true) list.add(HomeSection.QuickPicks)
@@ -1062,7 +1073,10 @@ fun HomeScreen(
 
             if (explorePage?.moodAndGenres != null) list.add(HomeSection.MoodAndGenres)
 
-            if (randomizeHomeOrder) {
+            if (true) {
+                // Kings Play: fixed Home order (change it in Settings > Home order)
+                kingsSortHomeSections(list, homePage?.sections?.map { it.title } ?: emptyList(), kingsHomeOrder)
+            } else if (randomizeHomeOrder) {
                 list.sortedByDescending { section ->
                     // Use a stable seed for each section based on the session seed + section ID hash
                     // This ensures the weight for a specific section remains constant during a session (until refresh)
@@ -1449,14 +1463,7 @@ fun HomeScreen(
                                     val targetItemSize = 160.dp
                                     val availableWidth = maxWidth - 32.dp
                                     val columns = (availableWidth / targetItemSize).toInt().coerceAtLeast(3)
-                                    val rows =
-                                        if (columns >= 6) {
-                                            1
-                                        } else if (columns >= 4) {
-                                            2
-                                        } else {
-                                            3
-                                        }
+                                    val rows = 1 // Kings Play: speed dial in one row
                                     val itemsPerPage = columns * rows
                                     val itemWidth = availableWidth / columns
 
@@ -1870,6 +1877,12 @@ fun HomeScreen(
                             }
                         }
 
+                        HomeSection.KingsRecents -> {
+                            item(key = "kings_recents") { KingsRecentsSection() }
+                        }
+                        HomeSection.KingsListenTogether -> {
+                            item(key = "kings_listen_together") { KingsListenTogetherCard() }
+                        }
                         HomeSection.FromTheCommunity -> {
                             communityPlaylists?.takeIf { it.isNotEmpty() }?.let { playlists ->
                                 item(key = "community_playlists_title") {
