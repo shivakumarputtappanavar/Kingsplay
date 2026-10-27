@@ -276,16 +276,6 @@ fun SettingsScreen(
 
     TopAppBar(
         title = { Text(stringResource(R.string.settings)) },
-        navigationIcon = {
-            IconButton(
-                onClick = navController::navigateUp,
-                onLongClick = navController::backToMain
-            ) {
-                Icon(
-                    painterResource(R.drawable.arrow_back),
-                    contentDescription = null
-                )
-            }
-        }
+        navigationIcon = {}
     )
 }

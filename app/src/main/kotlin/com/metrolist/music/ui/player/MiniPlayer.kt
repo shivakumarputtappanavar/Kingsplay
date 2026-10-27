@@ -85,6 +85,9 @@ import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.metrolist.music.ui.theme.LocalKingsBackdrop
 import com.metrolist.music.ui.theme.kingsGlass
+import com.metrolist.music.ui.theme.kingsCoverGlow
+import com.metrolist.music.ui.theme.kingsHeartBurst
+import com.metrolist.music.ui.theme.rememberCoverGlowColor
 import com.metrolist.music.ui.theme.rememberLiquidGlassEnabled
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalListenTogetherManager
@@ -310,6 +313,8 @@ private fun NewMiniPlayer(
     val kingsBackdrop = LocalKingsBackdrop.current
     val useGlass = rememberLiquidGlassEnabled() && kingsBackdrop != null
     val glassShape = RoundedCornerShape(32.dp)
+    // Kings Play: soft glow in the song cover's colors
+    val miniGlow = rememberCoverGlowColor(mediaMetadata?.thumbnailUrl)
 
     Box(
         modifier =
@@ -388,6 +393,7 @@ private fun NewMiniPlayer(
                     .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
                     .height(64.dp)
                     .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
+                    .kingsCoverGlow(miniGlow, 32.dp)
                     .then(
                         if (useGlass) {
                             Modifier
@@ -1125,6 +1131,7 @@ private fun FavoriteButton(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
+                .kingsHeartBurst(isLiked)
                 .size(40.dp)
                 .clip(CircleShape)
                 .border(

@@ -6,6 +6,9 @@
 
 package com.metrolist.music.ui.player
 
+import com.metrolist.music.ui.theme.KingsCoverGlowLayer
+import com.metrolist.music.ui.theme.kingsHeartBurst
+import com.metrolist.music.ui.theme.rememberCoverGlowColor
 import androidx.activity.compose.BackHandler
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -427,6 +430,8 @@ fun BottomSheetPlayer(
         mutableStateOf<List<Color>>(emptyList())
     }
     val gradientColorsCache = remember { mutableMapOf<String, List<Color>>() }
+    // Kings Play: the song cover's main color, for the now-playing glow
+    val kingsCoverGlow = rememberCoverGlowColor(mediaMetadata?.thumbnailUrl)
 
     if (!canSkipNext && automix.isNotEmpty()) {
         playerConnection.service.addToQueueAutomix(automix[0], 0)
@@ -1287,7 +1292,7 @@ fun BottomSheetPlayer(
                                             containerColor = textButtonColor,
                                             contentColor = iconButtonColor,
                                         ),
-                                    modifier = Modifier.size(42.dp),
+                                    modifier = Modifier.kingsHeartBurst(isFavorite).size(42.dp),
                                 ) {
                                     Icon(
                                         painter =
@@ -1735,7 +1740,7 @@ fun BottomSheetPlayer(
                                                     .kingsPlayButtonFx(
                                                         isPlaying = effectiveIsPlaying,
                                                         pressed = isPlayPausePressed,
-                                                        glowColor = MaterialTheme.colorScheme.primary,
+                                                        glowColor = kingsCoverGlow ?: MaterialTheme.colorScheme.primary,
                                                     )
                                                     .then(
                                                         if (kingsGlassButtons) {
@@ -1972,6 +1977,7 @@ fun BottomSheetPlayer(
                                     color = if (isFavorite) MaterialTheme.colorScheme.error else TextBackgroundColor,
                                     modifier =
                                         Modifier
+                                            .kingsHeartBurst(isFavorite)
                                             .size(32.dp)
                                             .padding(4.dp)
                                             .align(Alignment.Center),
@@ -2091,6 +2097,11 @@ fun BottomSheetPlayer(
                                 )
                             } else {
                                 Box(contentAlignment = Alignment.Center) {
+                                    // Kings Play: soft glow in the cover's colors behind the art
+                                    KingsCoverGlowLayer(
+                                        color = kingsCoverGlow,
+                                        modifier = Modifier.matchParentSize(),
+                                    )
                                     Thumbnail(
                                         sliderPositionProvider = sliderPositionProvider,
                                         // Kings Play: with a Kings style the normal cover is hidden,

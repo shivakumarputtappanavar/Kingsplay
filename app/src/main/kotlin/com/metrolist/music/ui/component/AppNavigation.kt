@@ -61,6 +61,9 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -331,10 +334,13 @@ private fun GlassNavigationBar(
     // 120 Hz: full effect with rainbow glass edges. 60 Hz: lighter, same feel.
     val fullFx = rememberPreference(EnableHighRefreshRateKey, defaultValue = true).value
 
-    val count = navigationItems.size.coerceAtLeast(1)
-    val selectedIndex = navigationItems.indexOfFirst { isRouteSelected(currentRoute, it.route, navigationItems) }
+    // Search gets its own round glass button next to the bar (like iPhone)
+    val searchItem = navigationItems.firstOrNull { it == Screens.Search }
+    val tabItems = navigationItems.filter { it != Screens.Search }
+    val count = tabItems.size.coerceAtLeast(1)
+    val selectedIndex = tabItems.indexOfFirst { isRouteSelected(currentRoute, it.route, navigationItems) }
     val currentSelected by rememberUpdatedState(selectedIndex)
-    val currentItems by rememberUpdatedState(navigationItems)
+    val currentItems by rememberUpdatedState(tabItems)
     val currentOnItemClick by rememberUpdatedState(onItemClick)
 
     val position = remember { Animatable(selectedIndex.coerceAtLeast(0).toFloat()) }
@@ -363,12 +369,19 @@ private fun GlassNavigationBar(
     val activeIndex = if (dragging || l > 0.01f) pos.roundToInt() else selectedIndex
 
     Box(modifier = modifier.fillMaxWidth()) {
+      Row(
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .padding(start = 14.dp, end = 14.dp, top = 6.dp)
+            .fillMaxWidth()
+            .height(pillHeight),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(start = 14.dp, end = 14.dp, top = 6.dp)
-                .fillMaxWidth()
-                .height(pillHeight)
+                .weight(1f)
+                .fillMaxHeight()
                 .onSizeChanged { barWidthPx = it.width }
         ) {
             // The glass bar
@@ -474,7 +487,7 @@ private fun GlassNavigationBar(
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                navigationItems.forEachIndexed { index, screen ->
+                tabItems.forEachIndexed { index, screen ->
                     val isSelected = index == activeIndex
                     val currentIsSelected by rememberUpdatedState(index == selectedIndex)
                     val iconRes = remember(isSelected, screen) {
@@ -563,5 +576,104 @@ private fun GlassNavigationBar(
                 }
             }
         }
+
+        // Round glass Search button
+        if (searchItem != null) {
+            KingsGlassSearchButton(
+                backdrop = backdrop,
+                screen = searchItem,
+                selected = isRouteSelected(currentRoute, searchItem.route, navigationItems),
+                size = pillHeight,
+                dark = dark,
+                pureBlack = pureBlack,
+                onClick = { alreadySelected -> onItemClick(searchItem, alreadySelected) },
+                onLongClick = onSearchLongClick,
+            )
+        }
+      }
+    }
+}
+
+@Composable
+private fun KingsGlassSearchButton(
+    backdrop: LayerBackdrop,
+    screen: Screens,
+    selected: Boolean,
+    size: androidx.compose.ui.unit.Dp,
+    dark: Boolean,
+    pureBlack: Boolean,
+    onClick: (Boolean) -> Unit,
+    onLongClick: (() -> Unit)?,
+) {
+    val colors = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
+    val viewConfiguration = LocalViewConfiguration.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val currentSelected by rememberUpdatedState(selected)
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = 0.45f, stiffness = 500f),
+        label = "kpSearchScale",
+    )
+
+    // Tap = open search, long press = Metrolist's long-press action
+    LaunchedEffect(interactionSource, onLongClick) {
+        var isLongClick = false
+        interactionSource.interactions.collectLatest { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    isLongClick = false
+                    if (onLongClick != null) {
+                        delay(viewConfiguration.longPressTimeoutMillis)
+                        isLongClick = true
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongClick()
+                    }
+                }
+                is PressInteraction.Release -> {
+                    if (!isLongClick) onClick(currentSelected)
+                }
+                is PressInteraction.Cancel -> isLongClick = false
+            }
+        }
+    }
+
+    val iconRes = if (selected) screen.iconIdActive else screen.iconIdInactive
+    Box(
+        modifier = Modifier
+            .size(size)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .kingsGlass(
+                backdrop = backdrop,
+                shape = CircleShape,
+                surface = if (pureBlack) Color.Black else colors.surfaceContainer,
+                tint = colors.primary,
+                dark = dark,
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {},
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(size - 10.dp)
+                    .clip(CircleShape)
+                    .background(if (dark) Color.White.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.55f))
+            )
+        }
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = stringResource(screen.titleId),
+            tint = if (selected) colors.onSurface else colors.onSurface.copy(alpha = 0.8f),
+            modifier = Modifier.size(26.dp),
+        )
     }
 }
