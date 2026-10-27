@@ -5,8 +5,9 @@
  * Josh Songs (in Explore):
  *  - Insta Trending: songs trending on reels, one playlist that changes once a month
  *  - Today's Best 5: five josh playlists, a new set every day
- *  - All Josh Mix: every josh playlist combined into one
- *  - All Josh playlists: each mix on its own
+ *  - All Josh Mix: ALL josh playlists combined into one, new mix every day
+ *  - All Josh playlists: each mix on its own (about 150 songs: trending + new + max 10 old)
+ *  - Remix playlists: remixes of trending songs
  * Rules: no devotional songs, no folk songs, and songs from yesterday's mixes are not repeated today.
  * Songs come from YouTube Music searches (smart playlists, not a real AI model).
  */
@@ -88,30 +89,57 @@ import kotlin.random.Random
 
 // ---------------------------------------------------------------- themes
 
-data class JoshTheme(val title: String, val tag: String, val query: String)
-
-/** Josh playlists (no folk, no devotional). Most are trending Indian music. */
-private val JoshThemes = listOf(
-    JoshTheme("Trending Hindi Josh", "Hindi", "trending hindi songs high energy"),
-    JoshTheme("Bollywood Trending", "Hindi", "latest bollywood trending songs"),
-    JoshTheme("Bollywood Workout", "Hindi", "bollywood workout songs"),
-    JoshTheme("Road Trip Josh", "Hindi", "road trip songs bollywood"),
-    JoshTheme("Trending Punjabi", "Punjabi", "trending punjabi songs"),
-    JoshTheme("Bhangra Blast", "Punjabi", "punjabi bhangra hit songs"),
-    JoshTheme("Desi Hip-Hop", "Hindi · Punjabi", "trending desi hip hop songs"),
-    JoshTheme("Kannada Josh", "Kannada", "kannada mass hit songs"),
-    JoshTheme("Sandalwood Mass", "Kannada", "kannada mass hero songs"),
-    JoshTheme("Kannada Party Hits", "Kannada", "kannada party dance songs"),
-    JoshTheme("Trending Tamil", "Tamil", "trending tamil songs"),
-    JoshTheme("Tamil Mass Beats", "Tamil", "tamil mass songs anirudh"),
-    JoshTheme("Trending Telugu", "Telugu", "trending telugu songs"),
-    JoshTheme("Telugu Mass Hits", "Telugu", "telugu mass dance songs"),
-    JoshTheme("Trending Malayalam", "Malayalam", "trending malayalam songs"),
-    JoshTheme("Trending Marathi", "Marathi", "trending marathi dj songs"),
-    JoshTheme("Party Anthems India", "All Indian", "trending indian party songs"),
-    JoshTheme("Pump Up Anthems", "English", "pump up workout songs"),
-    JoshTheme("Trending English Hits", "English", "trending english songs"),
+/**
+ * One josh playlist. Songs come from 3 searches:
+ *  trending = most of the playlist, latest = new songs ({year} = this year),
+ *  old = only up to 10 older songs.
+ */
+data class JoshTheme(
+    val title: String,
+    val tag: String,
+    val trending: String,
+    val latest: String,
+    val old: String,
+    val remix: Boolean = false,
 )
+
+/** Josh playlists (no folk, no devotional). */
+private val JoshThemes = listOf(
+    JoshTheme("Trending Hindi Josh", "Hindi", "trending hindi songs high energy", "new hindi songs {year}", "old hindi party songs"),
+    JoshTheme("Bollywood Trending", "Hindi", "latest bollywood trending songs", "new bollywood movie songs {year}", "2000s bollywood hit songs"),
+    JoshTheme("Bollywood Workout", "Hindi", "bollywood workout songs", "new bollywood gym songs {year}", "old bollywood energetic songs"),
+    JoshTheme("Road Trip Josh", "Hindi", "road trip songs bollywood", "new hindi road trip songs {year}", "old hindi road trip songs"),
+    JoshTheme("Trending Punjabi", "Punjabi", "trending punjabi songs", "new punjabi songs {year}", "old punjabi hit songs"),
+    JoshTheme("Bhangra Blast", "Punjabi", "punjabi bhangra hit songs", "new bhangra songs {year}", "old bhangra songs"),
+    JoshTheme("Desi Hip-Hop", "Hindi · Punjabi", "trending desi hip hop songs", "new desi hip hop {year}", "old desi hip hop songs"),
+    JoshTheme("Kannada Josh", "Kannada", "kannada mass hit songs", "new kannada songs {year}", "old kannada hit songs"),
+    JoshTheme("Sandalwood Mass", "Kannada", "kannada mass hero songs", "new kannada movie mass songs {year}", "old kannada mass songs"),
+    JoshTheme("Kannada Party Hits", "Kannada", "kannada party dance songs", "new kannada dance songs {year}", "old kannada dance songs"),
+    JoshTheme("Trending Tamil", "Tamil", "trending tamil songs", "new tamil songs {year}", "old tamil hit songs"),
+    JoshTheme("Tamil Mass Beats", "Tamil", "tamil mass songs anirudh", "new tamil mass songs {year}", "old tamil mass songs"),
+    JoshTheme("Trending Telugu", "Telugu", "trending telugu songs", "new telugu songs {year}", "old telugu hit songs"),
+    JoshTheme("Telugu Mass Hits", "Telugu", "telugu mass dance songs", "new telugu mass songs {year}", "old telugu mass songs"),
+    JoshTheme("Trending Malayalam", "Malayalam", "trending malayalam songs", "new malayalam songs {year}", "old malayalam hit songs"),
+    JoshTheme("Trending Marathi", "Marathi", "trending marathi dj songs", "new marathi songs {year}", "old marathi hit songs"),
+    JoshTheme("Party Anthems India", "All Indian", "trending indian party songs", "new party songs india {year}", "old bollywood party songs"),
+    JoshTheme("Pump Up Anthems", "English", "pump up workout songs", "new workout songs {year}", "2010s pump up songs"),
+    JoshTheme("Trending English Hits", "English", "trending english songs", "new english songs {year}", "2010s english hits"),
+)
+
+/** Remix playlists: remixes of trending songs. */
+private val RemixThemes = listOf(
+    JoshTheme("Trending Reels Remix", "Remix", "trending reels remix songs", "new reels remix songs {year}", "old songs remix", remix = true),
+    JoshTheme("Bollywood Remix", "Hindi Remix", "bollywood remix songs trending", "new bollywood remix {year}", "old bollywood remix songs", remix = true),
+    JoshTheme("Bollywood Party Mashup", "Hindi Remix", "bollywood party mashup", "new bollywood mashup {year}", "old bollywood mashup", remix = true),
+    JoshTheme("Punjabi Remix", "Punjabi Remix", "punjabi remix songs trending", "new punjabi remix {year}", "old punjabi remix songs", remix = true),
+    JoshTheme("Kannada DJ Remix", "Kannada Remix", "kannada dj remix songs", "new kannada dj remix {year}", "old kannada dj remix songs", remix = true),
+    JoshTheme("Tamil Remix", "Tamil Remix", "tamil remix songs trending", "new tamil remix {year}", "old tamil remix songs", remix = true),
+    JoshTheme("Telugu DJ Remix", "Telugu Remix", "telugu dj remix songs", "new telugu dj remix {year}", "old telugu dj remix songs", remix = true),
+    JoshTheme("English Remix", "English Remix", "trending english remix songs", "new english remix songs {year}", "old english songs remix", remix = true),
+)
+
+/** Every playlist (josh + remix). */
+private val AllThemes = JoshThemes + RemixThemes
 
 /** Insta trending searches; one is used per month. */
 private val InstaQueries = listOf(
@@ -123,17 +151,45 @@ private val InstaQueries = listOf(
     "reels trending songs this month",
 )
 
-/** Songs with these words are skipped: devotional and folk. */
+/**
+ * Songs are skipped if the song name, singer or album has any of these words.
+ * Devotional and folk, in English letters and in Indian scripts.
+ */
 private val BlockedWords = listOf(
-    "devotional", "bhakti", "bhajan", "aarti", "aarathi", "arati", "mantra", "stotra", "stotram",
-    "chalisa", "suprabhatam", "kirtan", "keertan", "namavali", "shloka", "sloka", "temple",
-    "ayyappa", "god song", "gospel", "worship", "hymn", "jai shree", "jai shri",
-    "folk", "janapada", "jaanapada", "lok geet", "lokgeet", "lavani",
+    // devotional
+    "devotional", "bhakti", "bhakthi", "bhakthigeethe", "bhakti geete", "bhakti sagar", "bhajan", "bhajana",
+    "aarti", "aarthi", "aarathi", "arati", "mantra", "stotra", "stotram", "stuti", "chalisa", "suprabhatam",
+    "kirtan", "keertan", "keerthane", "keerthana", "sankirtan", "namavali", "shloka", "sloka", "temple",
+    "ayyappa", "god song", "gospel", "worship", "hymn", "jesus", "christian", "praise and",
+    "jai shree", "jai shri", "jai mata", "mata rani", "maa durga", "durga", "navratri special",
+    "hanuman", "ganesha", "ganapati", "ganpati", "sai baba", "murugan", "amman", "venkateswara",
+    "mahadev", "bholenath", "bhole baba", "bol bam", "kanwar", "har har", "namah shivaya", "om namah",
+    "hare krishna", "hare rama", "radhe radhe", "shyam baba", "khatu shyam", "gurbani", "shabad",
+    "naat", "hamd", "islamic", "dasara pada", "dasa pada", "amritwani", "jaap", "paath", "satsang",
+    "भजन", "आरती", "भक्ति", "भक्ती", "चालीसा", "मंत्र", "ಭಕ್ತಿ", "ಭಜನೆ", "ದೇವರ", "பக்தி", "భక్తి", "ഭക്തി",
+    // folk
+    "folk", "janapada", "jaanapada", "lok geet", "lokgeet", "lavani", "gondhal", "bihu", "baul",
+    "garhwali", "kumaoni", "pahari", "koli geet", "dollu kunitha", "kolata", "lok sangeet",
+    "लोकगीत", "लोक गीत", "ಜಾನಪದ",
 )
 
+/** Very long tracks (bhajans, jukeboxes) are skipped too. */
+private const val MaxSongSeconds = 9 * 60
+
+private fun isBlockedText(text: String): Boolean {
+    val lower = text.lowercase()
+    return BlockedWords.any { it in lower }
+}
+
 private fun SongItem.isJoshAllowed(): Boolean {
-    val text = (title + " " + artists.joinToString(" ") { it.name } + " " + (album?.name ?: "")).lowercase()
-    return BlockedWords.none { it in text }
+    if ((duration ?: 0) > MaxSongSeconds) return false
+    return !isBlockedText(title + " " + artists.joinToString(" ") { it.name } + " " + (album?.name ?: ""))
+}
+
+/** Final check just before playing (also for playlists saved earlier on the phone). */
+private fun MediaMetadata.isJoshAllowed(): Boolean {
+    if (duration > MaxSongSeconds) return false
+    return !isBlockedText(title + " " + artists.joinToString(" ") { it.name })
 }
 
 private val Palettes = listOf(
@@ -152,7 +208,7 @@ private fun paletteFor(i: Int) = Palettes[i % Palettes.size]
 
 /** Today's Best 5: changes every day. */
 fun todaysBestJosh(): List<JoshTheme> =
-    JoshThemes.shuffled(Random(LocalDate.now().toEpochDay())).take(5)
+    AllThemes.shuffled(Random(LocalDate.now().toEpochDay())).take(5)
 
 // ---------------------------------------------------------------- no-repeat memory
 
@@ -191,67 +247,96 @@ private suspend fun searchSongs(query: String, pages: Int): List<SongItem> {
 }
 
 /**
- * Takes songs that were not played in yesterday's mixes. Only if there are too few new songs,
- * it fills up with older ones (at the end), so a playlist is never empty.
+ * Puts songs that were NOT in yesterday's mixes first. Only if there are not enough,
+ * yesterday's songs fill the rest, so every playlist is full.
  */
 private fun pickFresh(songs: List<SongItem>, skip: Set<String>, count: Int): List<SongItem> {
     val fresh = songs.filter { it.id !in skip }
-    if (fresh.size >= count / 2) return fresh.take(count)
-    return (fresh + songs.filter { it.id in skip }).take(count / 2)
+    return (fresh + songs.filter { it.id in skip }).take(count)
 }
 
-/** One josh playlist: filtered, no songs from yesterday, shuffled. */
+/** How many songs a playlist has: about 140 trending + new, plus up to 10 old ones. */
+private const val MainSongs = 142
+private const val OldSongs = 10
+
+private fun String.withYear() = replace("{year}", LocalDate.now().year.toString())
+
+/** One josh playlist: trending + new songs, max 10 old songs, no songs from yesterday first. */
 private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMetadata> = withContext(Dispatchers.IO) {
     val skip = yesterdaysSongs(context)
-    val found = searchSongs(theme.query, pages = 4)
-        .filter { it.isJoshAllowed() }
-        .distinctBy { it.id }
-    val songs = pickFresh(found.shuffled(), skip, 35)
+    val (trending, latest, old) = coroutineScope {
+        listOf(
+            async { runCatching { searchSongs(theme.trending, pages = 6) }.getOrDefault(emptyList()) },
+            async { runCatching { searchSongs(theme.latest.withYear(), pages = 6) }.getOrDefault(emptyList()) },
+            async { runCatching { searchSongs(theme.old, pages = 1) }.getOrDefault(emptyList()) },
+        ).awaitAll()
+    }
+    // trending and new songs, taken in turns
+    val mainFound = mutableListOf<SongItem>()
+    for (i in 0 until maxOf(trending.size, latest.size)) {
+        trending.getOrNull(i)?.let { mainFound += it }
+        latest.getOrNull(i)?.let { mainFound += it }
+    }
+    val main = pickFresh(mainFound.filter { it.isJoshAllowed() }.distinctBy { it.id }, skip, MainSongs)
+    val mainIds = main.map { it.id }.toSet()
+    val oldOnes = pickFresh(
+        old.filter { it.isJoshAllowed() && it.id !in mainIds }.distinctBy { it.id }.shuffled(),
+        skip,
+        OldSongs,
+    )
+    val songs = (main + oldOnes).shuffled()
     rememberToday(context, songs.map { it.id })
     songs.map { it.toMetadata() }
 }
 
-/** All Josh Mix: songs from every playlist of today combined. */
+/**
+ * All Josh Mix: ALL josh playlists combined into one big playlist.
+ * Made once a day and kept the same all day; tomorrow a new mix is made
+ * (new order, and songs from yesterday are skipped).
+ */
 private suspend fun loadAllJosh(context: Context): List<MediaMetadata> = withContext(Dispatchers.IO) {
+    val day = LocalDate.now().toEpochDay()
+    val key = "alljosh_v2_$day"
+    loadSaved(context, key)?.let { return@withContext it }
+
     val skip = yesterdaysSongs(context)
-    val themes = todaysBestJosh() + JoshThemes.shuffled(Random(LocalDate.now().toEpochDay() + 7)).take(4)
+    val random = Random(day)
     val lists = coroutineScope {
-        themes.distinct().map { theme -> async { runCatching { searchSongs(theme.query, pages = 1) }.getOrDefault(emptyList()) } }.awaitAll()
-    }
+        AllThemes.map { theme ->
+            async { runCatching { searchSongs(theme.trending, pages = 1) }.getOrDefault(emptyList()).shuffled(random) }
+        }.awaitAll()
+    }.shuffled(random)
     // take songs in turns from each playlist so the mix has every flavour
     val mixed = mutableListOf<SongItem>()
     val max = lists.maxOfOrNull { it.size } ?: 0
     for (i in 0 until max) lists.forEach { list -> list.getOrNull(i)?.let { mixed += it } }
-    val songs = pickFresh(mixed.filter { it.isJoshAllowed() }.distinctBy { it.id }, skip, 100)
-    rememberToday(context, songs.map { it.id })
+    val songs = pickFresh(mixed.filter { it.isJoshAllowed() }.distinctBy { it.id }, skip, 220)
+    if (songs.isNotEmpty()) {
+        rememberToday(context, songs.map { it.id })
+        save(context, key, "alljosh_", songs)
+    }
     songs.map { it.toMetadata() }
 }
 
-/** Insta Trending: fetched once per month and kept the same all month. */
-private suspend fun loadInstaMonth(context: Context): List<MediaMetadata> = withContext(Dispatchers.IO) {
-    val month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"))
-    val key = "insta_$month"
-    val saved = prefs(context).getString(key, null)
-    if (saved != null) {
-        val arr = JSONArray(saved)
-        val list = (0 until arr.length()).map { i ->
-            val o = arr.getJSONObject(i)
-            MediaMetadata(
-                id = o.getString("id"),
-                title = o.getString("title"),
-                artists = listOf(MediaMetadata.Artist(id = null, name = o.optString("artist"))),
-                duration = o.optInt("duration", -1),
-                thumbnailUrl = o.optString("thumb").ifBlank { null },
-            )
-        }
-        if (list.isNotEmpty()) return@withContext list
+/** Reads a saved playlist (song list) from the phone. */
+private fun loadSaved(context: Context, key: String): List<MediaMetadata>? {
+    val saved = prefs(context).getString(key, null) ?: return null
+    val arr = runCatching { JSONArray(saved) }.getOrNull() ?: return null
+    val list = (0 until arr.length()).map { i ->
+        val o = arr.getJSONObject(i)
+        MediaMetadata(
+            id = o.getString("id"),
+            title = o.getString("title"),
+            artists = listOf(MediaMetadata.Artist(id = null, name = o.optString("artist"))),
+            duration = o.optInt("duration", -1),
+            thumbnailUrl = o.optString("thumb").ifBlank { null },
+        )
     }
-    val monthIndex = LocalDate.now().let { it.year * 12 + it.monthValue }
-    val query = InstaQueries[monthIndex % InstaQueries.size]
-    val songs = searchSongs(query, pages = 3)
-        .filter { it.isJoshAllowed() }
-        .distinctBy { it.id }
-        .take(60)
+    return list.ifEmpty { null }
+}
+
+/** Saves a playlist on the phone and removes old ones with the same prefix. */
+private fun save(context: Context, key: String, prefix: String, songs: List<SongItem>) {
     val arr = JSONArray()
     songs.forEach { s ->
         arr.put(
@@ -263,9 +348,24 @@ private suspend fun loadInstaMonth(context: Context): List<MediaMetadata> = with
                 .put("thumb", s.thumbnail)
         )
     }
-    val editor = prefs(context).edit()
-    prefs(context).all.keys.filter { it.startsWith("insta_") && it != key }.forEach { editor.remove(it) }
+    val p = prefs(context)
+    val editor = p.edit()
+    p.all.keys.filter { it.startsWith(prefix) && it != key }.forEach { editor.remove(it) }
     editor.putString(key, arr.toString()).apply()
+}
+
+/** Insta Trending: fetched once per month and kept the same all month. */
+private suspend fun loadInstaMonth(context: Context): List<MediaMetadata> = withContext(Dispatchers.IO) {
+    val month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"))
+    val key = "insta_v2_$month"
+    loadSaved(context, key)?.let { return@withContext it }
+    val monthIndex = LocalDate.now().let { it.year * 12 + it.monthValue }
+    val query = InstaQueries[monthIndex % InstaQueries.size]
+    val songs = searchSongs(query, pages = 7)
+        .filter { it.isJoshAllowed() }
+        .distinctBy { it.id }
+        .take(130)
+    if (songs.isNotEmpty()) save(context, key, "insta_", songs)
     songs.map { it.toMetadata() }
 }
 
@@ -324,7 +424,10 @@ fun KingsJoshScreen(navController: NavController) {
         if (loading != null) return
         loading = id
         scope.launch {
+            // final safety check + a new random order on every tap
             val songs = runCatching { loader() }.getOrDefault(emptyList())
+                .filter { it.isJoshAllowed() }
+                .shuffled()
             loading = null
             if (songs.isEmpty()) {
                 Toast.makeText(context, "Couldn't load this playlist. Check your internet.", Toast.LENGTH_SHORT).show()
@@ -347,7 +450,7 @@ fun KingsJoshScreen(navController: NavController) {
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
                 Text(
-                    "No devotional or folk songs · no repeats from yesterday",
+                    "Josh v8 · ~150 songs each · shuffle on every tap · no devotional or folk",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),
@@ -365,16 +468,6 @@ fun KingsJoshScreen(navController: NavController) {
             ) { play("insta", "Insta Trending · $monthName") { loadInstaMonth(context) } }
         }
 
-        item(key = "all") {
-            WideCard(
-                tag = "EVERYTHING IN ONE",
-                title = "All Josh Mix",
-                subtitle = "Every josh playlist combined · new every day",
-                colors = AllJoshColors,
-                loading = loading == "all",
-            ) { play("all", "All Josh Mix") { loadAllJosh(context) } }
-        }
-
         item(key = "best_title") { SectionTitle("Today's Best 5", "Changes every day") }
         item(key = "best") {
             LazyRow(
@@ -390,22 +483,36 @@ fun KingsJoshScreen(navController: NavController) {
             }
         }
 
-        item(key = "all_title") { SectionTitle("All Josh playlists", "Each mix on its own") }
-        val rows = JoshThemes.chunked(2)
-        rows.forEachIndexed { rowIndex, row ->
-            item(key = "row_$rowIndex") {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                ) {
-                    row.forEachIndexed { j, theme ->
-                        Box(Modifier.weight(1f)) {
-                            ThemeCard(theme, paletteFor(rowIndex * 2 + j + 3), loading == "t_${theme.title}", width = null) {
-                                play("t_${theme.title}", theme.title) { loadTheme(context, theme) }
+        item(key = "all_title") { SectionTitle("All Josh playlists", "All in one, or each mix on its own") }
+        item(key = "all") {
+            WideCard(
+                tag = "ALL ${AllThemes.size} PLAYLISTS IN ONE",
+                title = "All Josh Mix",
+                subtitle = "Every josh + remix playlist combined · new mix every day",
+                colors = AllJoshColors,
+                loading = loading == "all",
+            ) { play("all", "All Josh Mix") { loadAllJosh(context) } }
+        }
+        listOf("josh" to JoshThemes, "remix" to RemixThemes).forEach { (group, themes) ->
+            if (group == "remix") {
+                item(key = "remix_title") { SectionTitle("Remix playlists", "Remixes of trending songs") }
+            }
+            themes.chunked(2).forEachIndexed { rowIndex, row ->
+                item(key = "${group}_row_$rowIndex") {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    ) {
+                        row.forEachIndexed { j, theme ->
+                            Box(Modifier.weight(1f)) {
+                                val color = paletteFor(rowIndex * 2 + j + if (group == "remix") 1 else 3)
+                                ThemeCard(theme, color, loading == "t_${theme.title}", width = null) {
+                                    play("t_${theme.title}", theme.title) { loadTheme(context, theme) }
+                                }
                             }
                         }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }
