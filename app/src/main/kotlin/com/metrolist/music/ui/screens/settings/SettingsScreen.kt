@@ -98,9 +98,6 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
         KingsUpdateSettingsGroup()
 
-        // Kings Play: Home order
-        Spacer(modifier = Modifier.height(16.dp))
-        com.metrolist.music.ui.screens.KingsHomeOrderSettingsGroup()
 
         Spacer(modifier = Modifier.height(16.dp))
 

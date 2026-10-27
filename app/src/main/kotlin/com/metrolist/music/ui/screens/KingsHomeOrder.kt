@@ -65,7 +65,6 @@ val KingsHomeOrderKey = stringPreferencesKey("kingsHomeOrder")
 
 enum class KingsHomeSlot(val key: String, val label: String) {
     RECENTS("recents", "Recents"),
-    SPEED_DIAL("speed_dial", "Speed dial"),
     ALBUMS_SINGLES("albums_singles", "Albums & singles"),
     QUICK_PICKS("quick_picks", "Quick picks"),
     NEW_RELEASES("new_releases", "New releases"),
@@ -80,6 +79,7 @@ enum class KingsHomeSlot(val key: String, val label: String) {
     SIMILAR("similar", "Similar to what you like"),
     OTHER_YOUTUBE("other_youtube", "Other sections"),
     MOODS("moods", "Moods & genres"),
+    SPEED_DIAL("speed_dial", "Speed dial"),
 }
 
 fun kingsHomeOrder(saved: String): List<KingsHomeSlot> {
@@ -103,20 +103,29 @@ private fun slotOf(section: HomeSection, titles: List<String>): KingsHomeSlot = 
         // YouTube Music's own Home sections, recognised by their title
         val t = titles.getOrNull(section.index).orEmpty().lowercase()
         when {
-            "release" in t -> KingsHomeSlot.NEW_RELEASES
+            "release" in t || "new music" in t -> KingsHomeSlot.NEW_RELEASES
             "album" in t || "single" in t -> KingsHomeSlot.ALBUMS_SINGLES
-            "trending" in t || "chart" in t -> KingsHomeSlot.TRENDING
+            "trending" in t || "chart" in t || "top songs" in t || "hits" in t -> KingsHomeSlot.TRENDING
             "mix" in t -> KingsHomeSlot.MIXES
+            "listen again" in t || "recent" in t -> KingsHomeSlot.KEEP_LISTENING
             else -> KingsHomeSlot.OTHER_YOUTUBE
         }
     }
     else -> KingsHomeSlot.OTHER_YOUTUBE
 }
 
-/** Puts the Home sections in the Kings Play order (or the order chosen in Settings). */
+/**
+ * Puts the Home sections in the fixed Kings Play order:
+ * Recents, Albums & singles, Quick picks, New releases, Trending songs for you,
+ * Mixed playlists, Listen together, Keep listening, Forgotten favorites, then the rest.
+ * Speed dial is not shown.
+ */
+@Suppress("UNUSED_PARAMETER")
 fun kingsSortHomeSections(list: List<HomeSection>, titles: List<String>, saved: String): List<HomeSection> {
-    val order = kingsHomeOrder(saved)
-    return list.sortedBy { order.indexOf(slotOf(it, titles)) }
+    val order = KingsHomeSlot.entries
+    return list
+        .filter { it != HomeSection.SpeedDial }
+        .sortedBy { order.indexOf(slotOf(it, titles)) }
 }
 
 // ---------------------------------------------------------------- Recents (big cards)
