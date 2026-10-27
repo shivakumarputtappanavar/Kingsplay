@@ -94,6 +94,10 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
         KingsSoundSettingsGroup()
 
+        // Kings Play: Updates
+        Spacer(modifier = Modifier.height(16.dp))
+        KingsUpdateSettingsGroup()
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Player & Content Section (moved up and combined with content)

@@ -102,7 +102,7 @@ private data class CommunityLink(
 )
 
 // ===== Kings Play: edit these lines =====
-private const val KINGS_PLAY_VERSION = "1.0"
+private const val KINGS_PLAY_VERSION = com.metrolist.music.ui.theme.KingsPlayVersion
 private val DEV_NAME = "Shivakumar"
 private val DEV_GITHUB = "ShivakumarPuttappanavar"   // your GitHub username
 private val DEV_INSTAGRAM = "Shivakumar_Puttappanavar"  // your Instagram username

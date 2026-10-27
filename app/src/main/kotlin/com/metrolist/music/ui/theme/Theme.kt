@@ -113,6 +113,7 @@ fun MetrolistTheme(
             }
             if (isOuterTheme) {
                 KingsIntroHost()
+                KingsUpdateHost()
             }
         }
         }
