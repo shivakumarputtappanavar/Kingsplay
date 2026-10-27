@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.PlaylistItem
 import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
@@ -208,7 +209,7 @@ private val LoveThemes = listOf(
 /** Words and scripts that show a song's language. */
 private val LanguageWords = mapOf(
     "Hindi" to listOf("hindi", "bollywood"),
-    "Punjabi" to listOf("punjabi"),
+    "Punjabi" to listOf("punjabi", "bhangra"),
     "Kannada" to listOf("kannada", "sandalwood"),
     "Tamil" to listOf("tamil", "kollywood"),
     "Telugu" to listOf("telugu", "tollywood"),
@@ -245,7 +246,7 @@ private val LanguageArtists = mapOf(
 )
 
 /** True if the song looks like it is in [lang] (and not in another language). */
-private fun SongItem.isInLanguage(lang: String): Boolean {
+private fun SongItem.isInLanguage(lang: String, checkSingers: Boolean = true): Boolean {
     val artistNames = artists.map { it.name.lowercase().trim() }
     val artistText = artistNames.joinToString(" ")
     val text = (title + " " + (album?.name ?: "") + " " + artistText).lowercase()
@@ -263,6 +264,7 @@ private fun SongItem.isInLanguage(lang: String): Boolean {
         if (own == null || code !in own) return false
     }
     // a well-known singer of another language -> not this playlist
+    if (!checkSingers) return true
     for ((other, names) in LanguageArtists) {
         if (other == lang) continue
         if (artistNames.any { it in names }) {
@@ -417,6 +419,72 @@ private const val OldSongs = 10
 
 private fun String.withYear() = replace("{year}", LocalDate.now().year.toString())
 
+// ---------------------------------------------------------------- one language: YouTube Music's own playlists
+
+/** True if a playlist's name says it is in [lang] (YouTube Music names them "Kannada Hits", "Bollywood Workout" ...). */
+private fun PlaylistItem.isInLanguage(lang: String): Boolean {
+    val name = title.lowercase()
+    if (lang == "English") {
+        return LanguageWords.filterKeys { it != "English" }.values.flatten().none { it in name }
+    }
+    val others = LanguageWords.filterKeys { it != lang && it != "English" }.values.flatten()
+    return LanguageWords[lang].orEmpty().any { it in name } && others.none { it in name }
+}
+
+/**
+ * Songs from YouTube Music's own playlists of one language (for example "Kannada Mass Hits").
+ * These are made per language by YouTube Music, so other languages almost never get in.
+ * A different set of playlists is used every day.
+ */
+private suspend fun curatedSongs(queries: List<String>, lang: String, random: Random, maxPlaylists: Int): List<SongItem> = coroutineScope {
+    val found = queries.map { q ->
+        async {
+            runCatching {
+                YouTube.search(q, YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST).getOrNull()?.items?.filterIsInstance<PlaylistItem>()
+            }.getOrNull().orEmpty()
+        }
+    }.awaitAll()
+    // best results first: the top playlist of every search, then the second ...
+    val playlists = mutableListOf<PlaylistItem>()
+    for (i in 0 until (found.maxOfOrNull { it.size } ?: 0)) found.forEach { list -> list.getOrNull(i)?.let { playlists += it } }
+    val chosen = playlists
+        .distinctBy { it.id }
+        .filter { it.isInLanguage(lang) }
+        .take(maxPlaylists * 2)
+        .shuffled(random)
+        .take(maxPlaylists)
+    chosen.map { p ->
+        async {
+            runCatching {
+                val page = YouTube.playlist(p.id).getOrNull() ?: return@runCatching emptyList<SongItem>()
+                val more = page.songsContinuation?.let { YouTube.playlistContinuation(it).getOrNull()?.songs }.orEmpty()
+                page.songs + more
+            }.getOrDefault(emptyList())
+        }
+    }.awaitAll().flatten()
+}
+
+/** A one-language playlist made from YouTube Music's own playlists of that language (null if too few songs). */
+private suspend fun curatedTheme(theme: JoshTheme, lang: String, random: Random, skip: Set<String>): List<SongItem>? {
+    val mainCount = if (theme.love) 52 else MainSongs
+    val oldCount = if (theme.love) 8 else OldSongs
+    val fits = { s: SongItem -> s.isJoshAllowed() && s.isInLanguage(lang, checkSingers = false) }
+    val mainQueries = listOf(theme.trending, theme.latest.withYear()) + theme.extra
+    val main = curatedSongs(mainQueries, lang, random, maxPlaylists = 4)
+        .filter(fits)
+        .distinctBy { it.id }
+        .distinctBy { it.title.lowercase().filter { c -> c.isLetterOrDigit() } }
+        .shuffled(random)
+    if (main.size < 30) return null
+    val mainPicked = pickFresh(main, skip, mainCount)
+    val ids = mainPicked.map { it.id }.toSet()
+    val old = curatedSongs(listOf(theme.old), lang, random, maxPlaylists = 2)
+        .filter { fits(it) && it.id !in ids }
+        .distinctBy { it.id }
+        .shuffled(random)
+    return mainPicked + pickFresh(old, skip, oldCount)
+}
+
 /** One josh playlist: trending + new songs, max 10 old songs, no songs from yesterday first. */
 /** Extra search words; every day each playlist uses different ones, so it finds different songs. */
 private val MashupDayWords = listOf("", "lofi", "slowed reverb", "reels", "chill", "viral", "love", "party")
@@ -428,13 +496,24 @@ private val DayWords = listOf("", "hits", "dance", "party", "viral", "best", "to
 private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMetadata> = withContext(Dispatchers.IO) {
     // The playlist is made once a day and saved: same songs all day (new order on every tap), new songs tomorrow.
     val day = LocalDate.now().toEpochDay()
-    val prefix = "theme4_" + theme.title.hashCode() + "_"
+    val prefix = "theme5_" + theme.title.hashCode() + "_"
     val key = prefix + day
     loadSaved(context, key)?.let { return@withContext it }
 
     val random = Random(day * 31 + theme.title.hashCode())
     val words = DayWords.shuffled(random)
     val skip = yesterdaysSongs(context)
+
+    // one-language playlists: YouTube Music's own playlists of that language first
+    theme.onlyLanguage()?.let { lang ->
+        val curated = runCatching { curatedTheme(theme, lang, random, skip) }.getOrNull()
+        if (curated != null) {
+            val songs = curated.shuffled(random)
+            rememberToday(context, songs.map { it.id })
+            save(context, key, prefix, songs)
+            return@withContext songs.map { it.toMetadata() }
+        }
+    }
     // mashups: day words that fit mashups
     val loveWords = LoveDayWords.shuffled(random)
     val dayWord = { i: Int ->
@@ -733,7 +812,7 @@ private fun rememberCovers(id: String, query: String, savedKey: String? = null):
     return covers
 }
 
-private fun themeSavedKey(theme: JoshTheme) = "theme4_" + theme.title.hashCode() + "_" + LocalDate.now().toEpochDay()
+private fun themeSavedKey(theme: JoshTheme) = "theme5_" + theme.title.hashCode() + "_" + LocalDate.now().toEpochDay()
 
 /** One cover picture filling the space. */
 @Composable
@@ -841,7 +920,7 @@ fun KingsJoshScreen(navController: NavController) {
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
                 Text(
-                    "Josh v16 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
+                    "Josh v17 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),

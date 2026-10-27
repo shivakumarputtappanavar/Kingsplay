@@ -3,8 +3,7 @@
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * New look for playlist pages:
- *  - big rounded cover with a glow in the cover's colour
- *  - colour wash at the top of the page that fades while you scroll
+ *  - big rounded cover (no glow)
  *  - header slides slower than the list and fades out (parallax)
  *  - songs slide in softly while scrolling, the playing song is highlighted
  *  - Like · Play · Shuffle buttons
@@ -107,54 +106,20 @@ private fun Color.brightEnough(): Color =
 
 /** Colour wash at the top of the page (cover colour). Fades out while you scroll down. */
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun KingsPlaylistBackdrop(url: String?, state: LazyListState) {
-    val target = rememberKingsPlaylistColor(url)?.brightEnough() ?: Color.Transparent
-    val color by animateColorAsState(target, tween(800), label = "kpBackdrop")
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(560.dp)
-            .graphicsLayer {
-                alpha = if (state.firstVisibleItemIndex == 0) {
-                    (1f - state.firstVisibleItemScrollOffset / 1100f).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-            }
-            .background(
-                Brush.verticalGradient(
-                    0f to color.copy(alpha = color.alpha * 0.55f),
-                    0.55f to color.copy(alpha = color.alpha * 0.18f),
-                    1f to Color.Transparent,
-                )
-            )
-    )
+    // Kings Play: colour glow at the top of playlist pages removed
 }
 
 // ---------------------------------------------------------------- header
 
-/** Big rounded cover with a soft glow in its own colour and a glass shine. */
+/** Big rounded cover with a glass shine (no glow). */
 @Composable
 fun KingsPlaylistCover(url: String?, size: Dp = 260.dp) {
-    val glow = rememberKingsPlaylistColor(url)?.brightEnough() ?: Color.Transparent
-    val animated by animateColorAsState(glow, tween(800), label = "kpCoverGlow")
     val shape = RoundedCornerShape(30.dp)
     Box(
         Modifier
             .size(size)
-            .drawBehind {
-                if (animated.alpha < 0.01f) return@drawBehind
-                val r = 30.dp.toPx()
-                for (i in 1..7) {
-                    val grow = i * 4.dp.toPx()
-                    drawRoundRect(
-                        color = animated.copy(alpha = 0.09f * (8 - i) / 7f),
-                        topLeft = Offset(-grow, -grow + 6.dp.toPx()),
-                        size = Size(this.size.width + grow * 2, this.size.height + grow * 2),
-                        cornerRadius = CornerRadius(r + grow, r + grow),
-                    )
-                }
-            }
             .clip(shape)
             .border(1.dp, Color.White.copy(alpha = 0.14f), shape),
     ) {
@@ -198,30 +163,12 @@ fun KingsMetaPill(text: String) {
 }
 
 /** Soft glow around a rounded cover (used on your own / downloaded / liked playlist pages). */
-fun Modifier.kingsCoverRing(color: Color, corner: Dp = 28.dp): Modifier = drawBehind {
-    val r = corner.toPx()
-    for (i in 1..7) {
-        val grow = i * 4.dp.toPx()
-        drawRoundRect(
-            color = color.copy(alpha = 0.08f * (8 - i) / 7f),
-            topLeft = Offset(-grow, -grow + 6.dp.toPx()),
-            size = Size(size.width + grow * 2, size.height + grow * 2),
-            cornerRadius = CornerRadius(r + grow, r + grow),
-        )
-    }
-}
+@Suppress("UNUSED_PARAMETER")
+fun Modifier.kingsCoverRing(color: Color, corner: Dp = 28.dp): Modifier = this // glow removed
 
 /** Soft rings of glow around the big Play button. */
-fun Modifier.kingsPlayGlow(color: Color): Modifier = drawBehind {
-    for (i in 1..5) {
-        val grow = i * 4.dp.toPx()
-        drawCircle(
-            color = color.copy(alpha = 0.10f * (6 - i) / 5f),
-            radius = size.minDimension / 2f + grow,
-            center = center,
-        )
-    }
-}
+@Suppress("UNUSED_PARAMETER")
+fun Modifier.kingsPlayGlow(color: Color): Modifier = this // glow removed
 
 // ---------------------------------------------------------------- shuffle
 
@@ -262,14 +209,12 @@ fun Modifier.kingsHeaderParallax(state: LazyListState): Modifier = graphicsLayer
 @Composable
 fun Modifier.kingsRowAppear(): Modifier {
     val anim = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { anim.animateTo(1f, tween(320, easing = FastOutSlowInEasing)) }
+    // short and light so fast scrolling stays smooth
+    LaunchedEffect(Unit) { anim.animateTo(1f, tween(200, easing = FastOutSlowInEasing)) }
     return this.graphicsLayer {
         val v = anim.value
-        alpha = v
-        translationY = (1f - v) * 26.dp.toPx()
-        val scale = 0.96f + 0.04f * v
-        scaleX = scale
-        scaleY = scale
+        alpha = 0.4f + 0.6f * v
+        translationY = (1f - v) * 14.dp.toPx()
     }
 }
 

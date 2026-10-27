@@ -81,6 +81,7 @@ object KingsAppIcons {
      * On app open it is skipped when music is already playing or the phone is on silent/vibrate.
      */
     fun playSound(context: Context, icon: KingsAppIcon, force: Boolean = false) {
+        return // Kings Play: logo sounds removed
         runCatching {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             if (!force && (am.isMusicActive || am.ringerMode != AudioManager.RINGER_MODE_NORMAL)) return
@@ -102,6 +103,7 @@ object KingsAppIcons {
      * Skipped when music is already playing (for example when opening from the notification).
      */
     fun onAppStart(activity: ComponentActivity, savedInstanceState: Bundle?) {
+        return // Kings Play: intro animation and startup sound removed
         if (savedInstanceState != null) return // screen rotation etc. — not a fresh open
         val appContext = activity.applicationContext
         val musicPlaying = runCatching {

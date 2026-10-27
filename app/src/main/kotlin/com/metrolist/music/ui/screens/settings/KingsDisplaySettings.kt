@@ -208,31 +208,6 @@ fun KingsAppIconGroup() {
                     }
                 },
             ),
-            Material3SettingsItem(
-                icon = painterResource(R.drawable.volume_up),
-                title = { Text("Startup sound") },
-                description = { Text("Plays the logo's sound when Kings Play opens (not on silent, not while music plays)") },
-                trailingContent = {
-                    Switch(checked = soundOn, onCheckedChange = onSoundOnChange)
-                },
-            ),
-            Material3SettingsItem(
-                icon = painterResource(R.drawable.palette),
-                title = { Text("Intro animation") },
-                description = { Text("Animated logo and name when Kings Play opens (tap to skip)") },
-                trailingContent = {
-                    Switch(checked = introOn, onCheckedChange = onIntroOnChange)
-                },
-            ),
-            Material3SettingsItem(
-                icon = painterResource(R.drawable.play),
-                title = { Text("Preview intro") },
-                description = { Text("See and hear the ${selected.label} intro") },
-                onClick = {
-                    KingsIntroState.icon = selected
-                    KingsAppIcons.playSound(context, selected, force = true)
-                },
-            ),
         )
     )
 }

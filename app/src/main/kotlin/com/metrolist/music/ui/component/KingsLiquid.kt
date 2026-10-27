@@ -5,11 +5,9 @@
  * Liquid glass touch for the whole app (like the liquid bottom bar):
  *  - kingsLiquidPress: touch a song, card, setting or the search bar and it squishes like a
  *    water drop and bounces back.
- *  - Liquid glass lens (song lists, search, settings, 3-dot menus):
- *      press and hold for a moment, then move your finger: a clear glass lens appears and
- *      follows your finger, magnifying what is under it, stretching like liquid.
- *      Lift your finger: the lens drops on that item and it opens (song plays, setting opens).
- *    A quick tap, a normal scroll and a long press still work exactly as before.
+ *  - Liquid glass (song lists, search, settings, 3-dot menus): touch and a clear glass appears
+ *    under your finger. Move your finger up or down and the glass moves with it (the list scrolls
+ *    as normal). Lift your finger and it melts away. Taps and long presses work as normal.
  */
 
 package com.metrolist.music.ui.component
@@ -27,7 +25,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -59,7 +59,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import kotlin.math.abs
+import kotlin.math.exp
 
 // ---------------------------------------------------------------- liquid press
 
@@ -160,36 +160,26 @@ fun Modifier.kingsBubbleHost(state: KingsBubbleState, corner: Dp = 20.dp): Modif
 fun Modifier.kingsLiquidFollow(rowHeight: Dp = 64.dp, corner: Dp = 20.dp): Modifier =
     kingsLens(null, rowHeight, corner)
 
-/** Taps the screen at a point (in window coordinates), after the current touch is finished. */
-private var kingsIgnoreUntil = 0L
-
-private fun tapAt(view: View, windowPos: Offset) {
-    view.post {
-        val root = view.rootView
-        val t = SystemClock.uptimeMillis()
-        kingsIgnoreUntil = t + 300
-        val down = MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, windowPos.x, windowPos.y, 0)
-        val up = MotionEvent.obtain(t, t + 30, MotionEvent.ACTION_UP, windowPos.x, windowPos.y, 0)
-        down.source = InputDevice.SOURCE_TOUCHSCREEN
-        up.source = InputDevice.SOURCE_TOUCHSCREEN
-        root.dispatchTouchEvent(down)
-        root.dispatchTouchEvent(up)
-        down.recycle()
-        up.recycle()
-    }
+/** Moving glass: current edges (drawn) and where they are going (targets). */
+private class LensState {
+    var l by mutableFloatStateOf(0f)
+    var t by mutableFloatStateOf(0f)
+    var r by mutableFloatStateOf(0f)
+    var b by mutableFloatStateOf(0f)
+    var tl = 0f
+    var tt = 0f
+    var tr = 0f
+    var tb = 0f
+    var running = false
 }
 
 @Composable
 private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corner: Dp): Modifier {
-    val view = LocalView.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val accent = MaterialTheme.colorScheme.primary
-    val left = remember { Animatable(0f) }
-    val top = remember { Animatable(0f) }
-    val right = remember { Animatable(0f) }
-    val bottom = remember { Animatable(0f) }
-    val shown = remember { Animatable(0f) } // 0 hidden, 1 lens
+    val ls = remember { LensState() }
+    val shown = remember { Animatable(0f) }
     var host by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val density = LocalDensity.current
     val rowHeightPx = with(density) { rowHeight.toPx() }
@@ -206,190 +196,114 @@ private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corne
         return null
     }
 
-    /** Where the lens should be for a finger position. */
+    /** Where the glass should be for a finger position: on the item under it, or one row tall at the finger. */
     fun targetFor(pos: Offset, width: Float): Rect {
         itemAt(pos)?.let { return it }
         val half = rowHeightPx / 2f
-        val inset = insetPx
-        return Rect(inset, pos.y - half, width - inset, pos.y + half)
+        return Rect(insetPx, pos.y - half, width - insetPx, pos.y + half)
     }
 
-    fun moveTo(r: Rect, snap: Boolean) {
-        if (snap) {
-            scope.launch { left.snapTo(r.left) }
-            scope.launch { top.snapTo(r.top) }
-            scope.launch { right.snapTo(r.right) }
-            scope.launch { bottom.snapTo(r.bottom) }
-            return
+    fun setTarget(r: Rect) {
+        ls.tl = r.left
+        ls.tt = r.top
+        ls.tr = r.right
+        ls.tb = r.bottom
+    }
+
+    /** One smooth loop per touch (every screen frame): the edge in front moves fast, the edge behind follows = liquid. */
+    fun startLoop() {
+        if (ls.running) return
+        ls.running = true
+        scope.launch {
+            var last = 0L
+            while (ls.running) {
+                withFrameNanos { now ->
+                    val dt = if (last == 0L) 0.016f else ((now - last) / 1_000_000_000f).coerceIn(0f, 0.05f)
+                    last = now
+                    fun step(cur: Float, target: Float, fast: Boolean) =
+                        cur + (target - cur) * (1f - exp(-(if (fast) 30f else 12f) * dt))
+                    val goingDown = ls.tb > ls.b
+                    ls.t = step(ls.t, ls.tt, fast = !goingDown)
+                    ls.b = step(ls.b, ls.tb, fast = goingDown)
+                    ls.l = step(ls.l, ls.tl, fast = true)
+                    ls.r = step(ls.r, ls.tr, fast = true)
+                }
+            }
         }
-        // the edge in front moves fast, the edge behind follows slowly = liquid stretch
-        val fast = spring<Float>(dampingRatio = 0.72f, stiffness = 1500f)
-        val slow = spring<Float>(dampingRatio = 0.62f, stiffness = 420f)
-        val down = r.center.y > (top.value + bottom.value) / 2f
-        val rightward = r.center.x > (left.value + right.value) / 2f
-        scope.launch { top.animateTo(r.top, if (down) slow else fast) }
-        scope.launch { bottom.animateTo(r.bottom, if (down) fast else slow) }
-        scope.launch { left.animateTo(r.left, if (rightward) slow else fast) }
-        scope.launch { right.animateTo(r.right, if (rightward) fast else slow) }
     }
 
     return this
         .onGloballyPositioned { host = it }
         .pointerInput(registry) {
             awaitEachGesture {
+                // Only watches the finger: taps, long presses and scrolling work as normal.
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                if (SystemClock.uptimeMillis() < kingsIgnoreUntil) return@awaitEachGesture // our own tap
-                val slop = viewConfiguration.touchSlop
-                val longPress = viewConfiguration.longPressTimeoutMillis
-
                 val width = size.width.toFloat()
-                fun hide() {
-                    scope.launch { shown.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 380f)) }
-                }
-
-                // 0) touch: the glass appears under the finger at once (grows from the finger)
                 val first = targetFor(down.position, width)
-                moveTo(Rect(first.center, 0f).inflate(rowHeightPx / 3f), snap = true)
-                moveTo(first, snap = false)
-                scope.launch { shown.animateTo(0.7f, spring(dampingRatio = 0.55f, stiffness = 650f)) }
-
-                // 1) quick move = normal scrolling (the glass rides along under the finger),
-                //    quick lift = normal tap
-                val early = withTimeoutOrNull(150L) {
-                    var outcome = ""
-                    while (outcome.isEmpty()) {
-                        val e = awaitPointerEvent(PointerEventPass.Final)
-                        val c = e.changes.firstOrNull { it.id == down.id }
-                        if (c == null || !c.pressed) {
-                            outcome = "up"
-                        } else {
-                            moveTo(targetFor(c.position, width), snap = false)
-                            if (c.isConsumed || (c.position - down.position).getDistance() > slop) outcome = "moved"
-                        }
-                    }
-                    outcome
-                }
-                if (early == "moved") {
-                    while (true) {
-                        val e = awaitPointerEvent(PointerEventPass.Final)
-                        val c = e.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!c.pressed) break
-                        moveTo(targetFor(c.position, width), snap = false)
-                    }
-                }
-                if (early != null) {
-                    hide()
-                    return@awaitEachGesture
-                }
-
-                // 2) held a moment: now moving the finger slides the glass (the list does not scroll).
-                //    Song lists: holding still longer = the normal long press menu.
-                var pos = down.position
-                val armTime = if (registry != null) 30_000L else (longPress - 170L).coerceAtLeast(120L)
-                val armed = withTimeoutOrNull(armTime) {
-                    var outcome = ""
-                    while (outcome.isEmpty()) {
-                        val e = awaitPointerEvent(PointerEventPass.Initial)
-                        val c = e.changes.firstOrNull { it.id == down.id }
-                        if (c == null || !c.pressed) {
-                            outcome = "up"
-                        } else if ((c.position - down.position).getDistance() > slop / 3f) {
-                            e.changes.forEach { it.consume() } // no scrolling, no long press
-                            pos = c.position
-                            outcome = "lens"
-                        }
-                    }
-                    outcome
-                }
-                if (armed != "lens") {
-                    hide()
-                    return@awaitEachGesture
-                }
-
-                // 3) lens mode
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                moveTo(targetFor(pos, width), snap = false)
-                scope.launch { shown.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 520f)) }
-                var lastItem = itemAt(pos)
+                // the glass grows out of the finger
+                val c0 = first.center
+                ls.l = c0.x - 24f; ls.r = c0.x + 24f; ls.t = c0.y - 24f; ls.b = c0.y + 24f
+                setTarget(first)
+                startLoop()
+                scope.launch { shown.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 650f)) }
+                var lastItem = itemAt(down.position)
                 while (true) {
-                    val e = awaitPointerEvent(PointerEventPass.Initial)
+                    val e = awaitPointerEvent(PointerEventPass.Final)
                     val c = e.changes.firstOrNull { it.id == down.id } ?: break
-                    e.changes.forEach { it.consume() }
                     if (!c.pressed) break
-                    pos = c.position
-                    val item = itemAt(pos)
-                    if (item != null && item != lastItem) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
+                    // finger up = glass up, finger down = glass down (the list scrolls with it)
+                    setTarget(targetFor(c.position, width))
+                    val item = itemAt(c.position)
+                    if (item != null && item != lastItem) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     lastItem = item
-                    moveTo(targetFor(pos, width), snap = false)
                 }
-
-                // 4) lift: the lens drops onto the item and opens it
-                // tap the middle of the row (not the 3-dot button at the end)
-                val target = itemAt(pos)?.center ?: Offset(size.width * 0.4f, pos.y)
-                scope.launch { shown.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 380f)) }
-                val h = host
-                if (h != null && h.isAttached && pos.y >= 0f && pos.y <= size.height) {
-                    tapAt(view, h.localToWindow(target))
+                scope.launch {
+                    shown.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = 420f))
+                    if (shown.value < 0.02f) ls.running = false
                 }
             }
         }
         .drawWithContent {
             drawContent()
-            val s = shown.value
+            val s = shown.value.coerceIn(0f, 1.2f)
             if (s < 0.01f) return@drawWithContent
-            val a = s.coerceIn(0f, 1f)
-            // the lens grows slightly bigger than the row, like a drop of glass on top
-            val grow = 4.dp.toPx() * s
-            val rect = Rect(left.value - grow, top.value - grow, right.value + grow, bottom.value + grow)
+            val a = s.coerceAtMost(1f)
+            val grow = 3.dp.toPx() * a
+            val rect = Rect(ls.l - grow, ls.t - grow, ls.r + grow, ls.b + grow)
             if (rect.width <= 1f || rect.height <= 1f) return@drawWithContent
             val r = (corner.toPx() + grow).coerceAtMost(rect.height / 2f)
-            val shape = Path().apply { addRoundRect(RoundRect(rect, CornerRadius(r, r))) }
-
-            // soft shadow under the lens
+            val cr = CornerRadius(r, r)
+            // clear glass body (no copy of the text inside, so nothing shows twice)
+            drawRoundRect(color = Color.White.copy(alpha = 0.07f * a), topLeft = rect.topLeft, size = rect.size, cornerRadius = cr)
+            // light from the top
             drawRoundRect(
-                color = Color.Black.copy(alpha = 0.18f * a),
-                topLeft = Offset(rect.left, rect.top + 3.dp.toPx()),
+                brush = Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.16f * a), Color.Transparent),
+                    startY = rect.top,
+                    endY = rect.top + rect.height * 0.55f,
+                ),
+                topLeft = rect.topLeft,
                 size = rect.size,
-                cornerRadius = CornerRadius(r, r),
+                cornerRadius = cr,
             )
-            // magnified content inside the lens
-            clipPath(shape) {
-                val zoom = 1f + 0.10f * a
-                scale(zoom, zoom, pivot = rect.center) {
-                    this@drawWithContent.drawContent()
-                }
-                // clear glass tint + light from the top
-                drawRect(color = Color.White.copy(alpha = 0.05f * a), topLeft = rect.topLeft, size = rect.size)
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.20f * a), Color.Transparent),
-                        startY = rect.top,
-                        endY = rect.top + rect.height * 0.5f,
-                    ),
-                    topLeft = rect.topLeft,
-                    size = rect.size,
-                )
+            // rainbow edges like real glass
+            val stroke = Stroke(width = 1.5.dp.toPx())
+            translate(left = -1.dp.toPx()) {
+                drawRoundRect(Color(0xFFFF4D6D).copy(alpha = 0.30f * a), rect.topLeft, rect.size, cr, style = stroke)
             }
-            // rainbow edges like real glass (red on one side, blue on the other)
-            val stroke = Stroke(width = 1.6.dp.toPx())
-            translate(left = -1.2.dp.toPx()) {
-                drawRoundRect(Color(0xFFFF4D6D).copy(alpha = 0.35f * a), rect.topLeft, rect.size, CornerRadius(r, r), style = stroke)
-            }
-            translate(left = 1.2.dp.toPx()) {
-                drawRoundRect(Color(0xFF3DD6FF).copy(alpha = 0.35f * a), rect.topLeft, rect.size, CornerRadius(r, r), style = stroke)
+            translate(left = 1.dp.toPx()) {
+                drawRoundRect(Color(0xFF3DD6FF).copy(alpha = 0.30f * a), rect.topLeft, rect.size, cr, style = stroke)
             }
             // bright glass rim
             drawRoundRect(
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.85f * a), accent.copy(alpha = 0.35f * a), Color.White.copy(alpha = 0.45f * a)),
+                    listOf(Color.White.copy(alpha = 0.80f * a), accent.copy(alpha = 0.30f * a), Color.White.copy(alpha = 0.40f * a)),
                     startY = rect.top,
                     endY = rect.bottom,
                 ),
                 topLeft = rect.topLeft,
                 size = rect.size,
-                cornerRadius = CornerRadius(r, r),
+                cornerRadius = cr,
                 style = stroke,
             )
         }
