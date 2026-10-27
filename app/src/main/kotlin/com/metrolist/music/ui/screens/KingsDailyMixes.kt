@@ -7,7 +7,8 @@
  *  - Today's Best 5: five josh playlists, a new set every day
  *  - All Josh Mix: ALL josh playlists combined into one, new mix every day
  *  - All Josh playlists: each mix on its own (about 150 songs: trending + new + max 10 old)
- *  - Remix playlists: remixes of trending songs
+ *  - Language Mix playlists: two languages in one song, like Hindi x English
+ *  - All DJ Music: DJ songs from every language in one playlist
  * Rules: no devotional songs, no folk songs, and songs from yesterday's mixes are not repeated today.
  * Songs come from YouTube Music searches (smart playlists, not a real AI model).
  */
@@ -47,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +61,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +78,8 @@ import com.metrolist.music.R
 import com.metrolist.music.extensions.toMediaItem
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.queues.ListQueue
+import com.metrolist.music.ui.utils.resize
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -100,7 +105,7 @@ data class JoshTheme(
     val trending: String,
     val latest: String,
     val old: String,
-    val remix: Boolean = false,
+    val languageMix: Boolean = false,
 )
 
 /** Josh playlists (no folk, no devotional). */
@@ -126,20 +131,27 @@ private val JoshThemes = listOf(
     JoshTheme("Trending English Hits", "English", "trending english songs", "new english songs {year}", "2010s english hits"),
 )
 
-/** Remix playlists: remixes of trending songs. */
-private val RemixThemes = listOf(
-    JoshTheme("Trending Reels Remix", "Remix", "trending reels remix songs", "new reels remix songs {year}", "old songs remix", remix = true),
-    JoshTheme("Bollywood Remix", "Hindi Remix", "bollywood remix songs trending", "new bollywood remix {year}", "old bollywood remix songs", remix = true),
-    JoshTheme("Bollywood Party Mashup", "Hindi Remix", "bollywood party mashup", "new bollywood mashup {year}", "old bollywood mashup", remix = true),
-    JoshTheme("Punjabi Remix", "Punjabi Remix", "punjabi remix songs trending", "new punjabi remix {year}", "old punjabi remix songs", remix = true),
-    JoshTheme("Kannada DJ Remix", "Kannada Remix", "kannada dj remix songs", "new kannada dj remix {year}", "old kannada dj remix songs", remix = true),
-    JoshTheme("Tamil Remix", "Tamil Remix", "tamil remix songs trending", "new tamil remix {year}", "old tamil remix songs", remix = true),
-    JoshTheme("Telugu DJ Remix", "Telugu Remix", "telugu dj remix songs", "new telugu dj remix {year}", "old telugu dj remix songs", remix = true),
-    JoshTheme("English Remix", "English Remix", "trending english remix songs", "new english remix songs {year}", "old english songs remix", remix = true),
+/** Language Mix playlists: songs that mix two languages, like Hindi x English. */
+private val MixThemes = listOf(
+    JoshTheme("Hindi × English", "Hindi English", "hindi english mashup songs", "new hindi english mix songs {year}", "old hindi english mashup", languageMix = true),
+    JoshTheme("Punjabi × English", "Punjabi English", "punjabi english mix songs", "new punjabi english songs {year}", "old punjabi english mashup", languageMix = true),
+    JoshTheme("Kannada × English", "Kannada English", "kannada english mashup songs", "new kannada english mix songs {year}", "old kannada english mashup", languageMix = true),
+    JoshTheme("Tamil × English", "Tamil English", "tamil english mashup songs", "new tamil english mix songs {year}", "old tamil english mashup", languageMix = true),
+    JoshTheme("Telugu × English", "Telugu English", "telugu english mashup songs", "new telugu english mix songs {year}", "old telugu english mashup", languageMix = true),
+    JoshTheme("Malayalam × English", "Malayalam English", "malayalam english mashup songs", "new malayalam english mix songs {year}", "old malayalam english mashup", languageMix = true),
+    JoshTheme("Hindi × Punjabi", "Hindi Punjabi", "hindi punjabi mashup songs", "new hindi punjabi mashup {year}", "old hindi punjabi mashup", languageMix = true),
+    JoshTheme("Desi × English Party", "Desi English", "desi english party mix songs", "new desi english party songs {year}", "old desi english party songs", languageMix = true),
 )
 
-/** Every playlist (josh + remix). */
-private val AllThemes = JoshThemes + RemixThemes
+/** All DJ Music: DJ songs from every language (one search per language). */
+private val DjQueries = listOf(
+    "hindi dj songs", "bollywood dj remix songs", "punjabi dj songs", "kannada dj songs", "tamil dj songs",
+    "telugu dj songs", "malayalam dj songs", "marathi dj songs", "bengali dj songs", "gujarati dj songs",
+    "english edm dj songs",
+)
+
+/** Every playlist (josh + language mix). */
+private val AllThemes = JoshThemes + MixThemes
 
 /** Insta trending searches; one is used per month. */
 private val InstaQueries = listOf(
@@ -203,11 +215,12 @@ private val Palettes = listOf(
 )
 private val InstaColors = listOf(Color(0xFFFEDA75), Color(0xFFD62976), Color(0xFF4F5BD5))
 private val AllJoshColors = listOf(Color(0xFFFFD23F), Color(0xFFFF4D6D), Color(0xFF7C4DFF))
+private val DjColors = listOf(Color(0xFF00E5FF), Color(0xFF2962FF), Color(0xFF6A00F4))
 
 private fun paletteFor(i: Int) = Palettes[i % Palettes.size]
 
-/** Language of a playlist: "Hindi", "Hindi Remix", "Hindi · Punjabi" -> "Hindi" (Bollywood = Hindi). */
-private fun JoshTheme.language(): String = tag.substringBefore("·").substringBefore(" Remix").trim()
+/** Main language of a playlist: "Hindi", "Hindi English", "Hindi · Punjabi" -> "Hindi" (Bollywood = Hindi). */
+private fun JoshTheme.language(): String = tag.substringBefore("·").trim().substringBefore(" ")
 
 /** Today's Best 5: changes every day, and all 5 are in DIFFERENT languages (only one Hindi/Bollywood). */
 fun todaysBestJosh(): List<JoshTheme> =
@@ -339,6 +352,35 @@ private suspend fun loadAllJosh(context: Context): List<MediaMetadata> = withCon
     songs.map { it.toMetadata() }
 }
 
+/**
+ * All DJ Music: DJ songs from every language in one playlist.
+ * Made once a day and kept the same all day; new DJ songs tomorrow.
+ */
+private suspend fun loadAllDj(context: Context): List<MediaMetadata> = withContext(Dispatchers.IO) {
+    val day = LocalDate.now().toEpochDay()
+    val key = "alldj_$day"
+    loadSaved(context, key)?.let { return@withContext it }
+
+    val skip = yesterdaysSongs(context)
+    val random = Random(day + 99)
+    val lists = coroutineScope {
+        DjQueries.mapIndexed { i, query ->
+            val word = DayWords[((day + i) % DayWords.size).toInt()]
+            async { runCatching { searchSongs((query + " " + word).trim(), pages = 2) }.getOrDefault(emptyList()).shuffled(random) }
+        }.awaitAll()
+    }.shuffled(random)
+    // one song from each language in turns
+    val mixed = mutableListOf<SongItem>()
+    val max = lists.maxOfOrNull { it.size } ?: 0
+    for (i in 0 until max) lists.forEach { list -> list.getOrNull(i)?.let { mixed += it } }
+    val songs = pickFresh(mixed.filter { it.isJoshAllowed() }.distinctBy { it.id }, skip, 200)
+    if (songs.isNotEmpty()) {
+        rememberToday(context, songs.map { it.id })
+        save(context, key, "alldj_", songs)
+    }
+    songs.map { it.toMetadata() }
+}
+
 /** Reads a saved playlist (song list) from the phone. */
 private fun loadSaved(context: Context, key: String): List<MediaMetadata>? {
     val saved = cachePrefs(context).getString(key, null) ?: return null
@@ -398,6 +440,77 @@ private fun SongItem.toMetadata() = MediaMetadata(
     thumbnailUrl = thumbnail,
 )
 
+// ---------------------------------------------------------------- cover images
+
+/**
+ * Cover pictures for a card: album covers of real songs.
+ * If today's playlist is already made, its own song covers are used.
+ * Otherwise one quick search is done; the result is saved for the day.
+ */
+@Composable
+private fun rememberCovers(id: String, query: String, savedKey: String? = null): List<String> {
+    val context = LocalContext.current
+    val day = LocalDate.now().toEpochDay()
+    val prefix = "cover_" + id.hashCode() + "_"
+    val key = prefix + day
+    var covers by remember(key) { mutableStateOf(emptyList<String>()) }
+    LaunchedEffect(key) {
+        covers = withContext(Dispatchers.IO) {
+            val fromPlaylist = savedKey?.let { runCatching { loadSaved(context, it) }.getOrNull() }
+                ?.mapNotNull { it.thumbnailUrl }?.distinct()?.take(4)
+            if (!fromPlaylist.isNullOrEmpty()) return@withContext fromPlaylist
+            val saved = cachePrefs(context).getString(key, null)?.split("\n")?.filter { it.isNotBlank() }
+            if (!saved.isNullOrEmpty()) return@withContext saved
+            val found = runCatching { searchSongs(query, pages = 1) }.getOrDefault(emptyList())
+                .filter { it.isJoshAllowed() }
+                .map { it.thumbnail }
+                .distinct()
+                .take(4)
+            if (found.isNotEmpty()) {
+                val p = cachePrefs(context)
+                val editor = p.edit()
+                p.all.keys.filter { it.startsWith(prefix) && it != key }.forEach { editor.remove(it) }
+                editor.putString(key, found.joinToString("\n")).apply()
+            }
+            found
+        }
+    }
+    return covers
+}
+
+private fun themeSavedKey(theme: JoshTheme) = "theme_" + theme.title.hashCode() + "_" + LocalDate.now().toEpochDay()
+
+/** One cover picture filling the space. */
+@Composable
+private fun Cover(url: String, modifier: Modifier) {
+    AsyncImage(
+        model = url.resize(544, 544),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier,
+    )
+}
+
+/** Up to 3 covers side by side (for wide cards), with the card colour fading over them from the left. */
+@Composable
+private fun WideCovers(covers: List<String>, colors: List<Color>) {
+    if (covers.isEmpty()) return
+    Row(Modifier.fillMaxSize()) {
+        covers.take(3).forEach { url -> Cover(url, Modifier.weight(1f).fillMaxSize()) }
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(
+                Brush.horizontalGradient(
+                    0f to colors.first().copy(alpha = 0.97f),
+                    0.45f to colors.first().copy(alpha = 0.80f),
+                    1f to colors.last().copy(alpha = 0.35f),
+                )
+            )
+    )
+}
+
 // ---------------------------------------------------------------- Explore banner
 
 /** Old Home section name, kept so older Home code still builds. Josh mixes now live in Explore only. */
@@ -409,6 +522,7 @@ fun KingsDailyMixesSection(title: String = "", subtitle: String = "") {
 @Composable
 fun KingsJoshBanner() {
     val navController = LocalNavController.current
+    val covers = rememberCovers("banner", "trending songs india high energy")
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -416,17 +530,18 @@ fun KingsJoshBanner() {
             .height(130.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(AllJoshColors))
-            .glowSpots()
             .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
-            .clickable { navController.navigate("kings_josh") }
-            .padding(18.dp),
+            .clickable { navController.navigate("kings_josh") },
     ) {
+        WideCovers(covers, AllJoshColors)
+        Box(Modifier.fillMaxSize().glowSpots().padding(18.dp)) {
         Column(Modifier.align(Alignment.CenterStart)) {
             Text("JOSH SONGS", color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
             Text("Full josh playlists", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-            Text("Insta trending · Today's best 5 · All josh mix", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+            Text("Insta trending · Best 5 · All josh mix · DJ music", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
         }
         PlayDot(Modifier.align(Alignment.CenterEnd), AllJoshColors.last(), loading = false)
+        }
     }
 }
 
@@ -471,7 +586,7 @@ fun KingsJoshScreen(navController: NavController) {
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
                 Text(
-                    "Josh v9 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
+                    "Josh v11 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),
@@ -486,6 +601,7 @@ fun KingsJoshScreen(navController: NavController) {
                 subtitle = "Songs trending on reels · changes once a month",
                 colors = InstaColors,
                 loading = loading == "insta",
+                covers = rememberCovers("insta", "instagram reels trending songs", "insta_v2_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"))),
             ) { play("insta", "Insta Trending · $monthName") { loadInstaMonth(context) } }
         }
 
@@ -509,14 +625,25 @@ fun KingsJoshScreen(navController: NavController) {
             WideCard(
                 tag = "ALL ${AllThemes.size} PLAYLISTS IN ONE",
                 title = "All Josh Mix",
-                subtitle = "Every josh + remix playlist combined · new mix every day",
+                subtitle = "Every josh + language mix playlist combined · new mix every day",
                 colors = AllJoshColors,
                 loading = loading == "all",
+                covers = rememberCovers("alljosh", "trending indian party songs", "alljosh_v2_" + LocalDate.now().toEpochDay()),
             ) { play("all", "All Josh Mix") { loadAllJosh(context) } }
         }
-        listOf("josh" to JoshThemes, "remix" to RemixThemes).forEach { (group, themes) ->
-            if (group == "remix") {
-                item(key = "remix_title") { SectionTitle("Remix playlists", "Remixes of trending songs") }
+        item(key = "dj") {
+            WideCard(
+                tag = "DJ SONGS FROM EVERY LANGUAGE",
+                title = "All DJ Music",
+                subtitle = "Hindi, Punjabi, Kannada, Tamil, Telugu & more · new every day",
+                colors = DjColors,
+                loading = loading == "dj",
+                covers = rememberCovers("alldj", "hindi dj songs", "alldj_" + LocalDate.now().toEpochDay()),
+            ) { play("dj", "All DJ Music") { loadAllDj(context) } }
+        }
+        listOf("josh" to JoshThemes, "mix" to MixThemes).forEach { (group, themes) ->
+            if (group == "mix") {
+                item(key = "mix_title") { SectionTitle("Language Mix playlists", "Two languages in one, like Hindi × English") }
             }
             themes.chunked(2).forEachIndexed { rowIndex, row ->
                 item(key = "${group}_row_$rowIndex") {
@@ -526,7 +653,7 @@ fun KingsJoshScreen(navController: NavController) {
                     ) {
                         row.forEachIndexed { j, theme ->
                             Box(Modifier.weight(1f)) {
-                                val color = paletteFor(rowIndex * 2 + j + if (group == "remix") 1 else 3)
+                                val color = paletteFor(rowIndex * 2 + j + if (group == "mix") 1 else 3)
                                 ThemeCard(theme, color, loading == "t_${theme.title}", width = null) {
                                     play("t_${theme.title}", theme.title) { loadTheme(context, theme) }
                                 }
@@ -593,6 +720,7 @@ private fun WideCard(
     subtitle: String,
     colors: List<Color>,
     loading: Boolean,
+    covers: List<String> = emptyList(),
     onClick: () -> Unit,
 ) {
     Box(
@@ -602,17 +730,18 @@ private fun WideCard(
             .height(120.dp)
             .clip(RoundedCornerShape(22.dp))
             .background(Brush.linearGradient(colors))
-            .glowSpots()
             .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick)
-            .padding(18.dp),
+            .clickable(onClick = onClick),
     ) {
-        Column(Modifier.align(Alignment.CenterStart).padding(end = 56.dp)) {
-            Text(tag, color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
-            Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            Text(subtitle, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, maxLines = 2)
+        WideCovers(covers, colors)
+        Box(Modifier.fillMaxSize().glowSpots().padding(18.dp)) {
+            Column(Modifier.align(Alignment.CenterStart).padding(end = 56.dp)) {
+                Text(tag, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(subtitle, color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, maxLines = 2)
+            }
+            PlayDot(Modifier.align(Alignment.CenterEnd), colors.last(), loading)
         }
-        PlayDot(Modifier.align(Alignment.CenterEnd), colors.last(), loading)
     }
 }
 
@@ -625,16 +754,31 @@ private fun ThemeCard(
     rank: Int? = null,
     onClick: () -> Unit,
 ) {
+    val covers = rememberCovers(theme.title, theme.trending, themeSavedKey(theme))
     Box(
         modifier = Modifier
             .then(if (width != null) Modifier.size(width = width, height = 190.dp) else Modifier.fillMaxWidth().height(170.dp))
             .clip(RoundedCornerShape(22.dp))
             .background(Brush.linearGradient(colors))
-            .glowSpots()
             .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
+            .clickable(onClick = onClick),
     ) {
+        // the playlist's cover picture, with its colour fading in from the bottom so the name is easy to read
+        covers.firstOrNull()?.let { url ->
+            Cover(url, Modifier.fillMaxSize())
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to colors.first().copy(alpha = 0.35f),
+                            0.45f to colors.last().copy(alpha = 0.45f),
+                            1f to colors.last().copy(alpha = 0.97f),
+                        )
+                    )
+            )
+        }
+        Box(Modifier.fillMaxSize().padding(14.dp)) {
         Text(
             (if (rank != null) "#$rank  " else "") + theme.tag.uppercase(),
             color = Color.White.copy(alpha = 0.85f),
@@ -653,5 +797,6 @@ private fun ThemeCard(
             modifier = Modifier.align(Alignment.BottomStart).padding(end = 46.dp),
         )
         PlayDot(Modifier.align(Alignment.BottomEnd), colors.last(), loading)
+        }
     }
 }
