@@ -1053,7 +1053,6 @@ fun HomeScreen(
             if (!chipActive) {
                 list.add(HomeSection.KingsRecents)
                 list.add(HomeSection.KingsListenTogether)
-                list.add(HomeSection.KingsDailyMixes)
             }
 
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)

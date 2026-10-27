@@ -99,7 +99,7 @@ fun MoodAndGenresScreen(
 
         // Kings Play: daily josh mixes
         item(key = "kings_josh_songs") {
-            KingsDailyMixesSection(title = "Josh Songs", subtitle = "Trending josh in every language - new every day")
+            KingsJoshBanner()
         }
 
         if (moodAndGenresList == null) {
