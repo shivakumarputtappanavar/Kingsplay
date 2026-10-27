@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.search
 
+import com.metrolist.music.ui.component.kingsLiquidFollow
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -136,7 +138,7 @@ fun LocalSearchScreen(
 
         LazyColumn(
             state = lazyListState,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).kingsLiquidFollow(),
             contentPadding =
                 WindowInsets.systemBars
                     .only(WindowInsetsSides.Bottom)

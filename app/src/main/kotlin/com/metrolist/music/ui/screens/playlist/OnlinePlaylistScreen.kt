@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.kingsLiquidFollow
+
 import com.metrolist.music.ui.component.kingsHeaderParallax
 import com.metrolist.music.ui.component.kingsPlayGlow
 import com.metrolist.music.ui.component.kingsRowAppear
@@ -199,6 +201,7 @@ fun OnlinePlaylistScreen(
         com.metrolist.music.ui.component.KingsPlaylistBackdrop(playlist?.thumbnail, lazyListState)
         LazyColumn(
             state = lazyListState,
+            modifier = Modifier.kingsLiquidFollow(),
             contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime).asPaddingValues(),
         ) {
             if (playlist == null || songs.isEmpty()) {

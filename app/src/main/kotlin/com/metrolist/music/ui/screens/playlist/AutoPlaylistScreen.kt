@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.kingsLiquidFollow
+
 import com.metrolist.music.ui.component.kingsCoverRing
 import com.metrolist.music.ui.component.kingsHeaderParallax
 import com.metrolist.music.ui.component.kingsPlayGlow
@@ -509,6 +511,7 @@ fun AutoPlaylistScreen(
     ) {
         LazyColumn(
             state = state,
+            modifier = Modifier.kingsLiquidFollow(),
             contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
         ) {
             if (songs != null) {

@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.search
 
+import com.metrolist.music.ui.component.kingsLiquidFollow
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -490,7 +492,7 @@ fun OnlineSearchResult(
 
                 LazyColumn(
                     state = lazyListState,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().kingsLiquidFollow(),
                 ) {
                     if (searchFilter == null) {
                         searchSummary?.summaries?.forEach { summary ->

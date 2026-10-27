@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.search
 
+import com.metrolist.music.ui.component.kingsLiquidFollow
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -129,6 +131,7 @@ fun OnlineSearchScreen(
         modifier =
             Modifier
                 .fillMaxSize()
+                .kingsLiquidFollow()
                 .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.background),
     ) {
         // Show parsed URL item at the top if present
