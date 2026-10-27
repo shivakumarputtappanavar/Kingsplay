@@ -113,6 +113,9 @@ fun NavGraphBuilder.navigationBuilder(
         HistoryScreen(navController)
     }
 
+    composable("kings_local_music") {
+        com.metrolist.music.ui.screens.KingsLocalMusicScreen(navController)
+    }
     composable("stats") {
         StatsScreen(navController)
     }

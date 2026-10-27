@@ -83,6 +83,11 @@ import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.unit.lerp
 import kotlin.math.roundToInt
 
 @Stable
@@ -307,6 +312,20 @@ fun AppNavigationBar(
     }
 }
 
+/** Kings Play: the bar shrinks into small circles while you scroll down, and comes back when you scroll up. */
+object KingsBarState {
+    var collapsed by mutableStateOf(false)
+}
+
+/** Added to the app's scrolling area (MainActivity) so the bar knows when you scroll. */
+val KingsBarScroll: NestedScrollConnection = object : NestedScrollConnection {
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        if (available.y < -6f) KingsBarState.collapsed = true
+        else if (available.y > 6f) KingsBarState.collapsed = false
+        return Offset.Zero
+    }
+}
+
 // Kings Play: floating liquid glass bar with a sliding liquid bubble.
 // Tap a tab: the bubble lifts, slides like liquid (stretching with speed), bends what is
 // behind it, then settles. Press and drag across the bar: the bubble follows your finger.
@@ -363,6 +382,15 @@ private fun GlassNavigationBar(
     }
 
     val pos = if (dragging) dragPos else position.value
+
+    // Shrinking bar: back to full size whenever you change screen
+    LaunchedEffect(currentRoute) { KingsBarState.collapsed = false }
+    val collapse by animateFloatAsState(
+        targetValue = if (KingsBarState.collapsed && !dragging) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 420f),
+        label = "kpBarCollapse",
+    )
+    var rowWidthPx by remember { mutableIntStateOf(0) }
     val l = lift.value
     val stretch = if (dragging) 0.06f * l else (abs(position.velocity) * 0.035f).coerceAtMost(0.28f)
     val restFill = if (dark) Color.White.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.55f)
@@ -374,13 +402,18 @@ private fun GlassNavigationBar(
             .align(Alignment.TopCenter)
             .padding(start = 14.dp, end = 14.dp, top = 6.dp)
             .fillMaxWidth()
-            .height(pillHeight),
+            .height(pillHeight)
+            .onSizeChanged { rowWidthPx = it.width },
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
       ) {
+        val fullPillWidth = with(density) { rowWidthPx.toDp() } - if (searchItem != null) pillHeight + 10.dp else 0.dp
         Box(
             modifier = Modifier
-                .weight(1f)
+                .then(
+                    if (collapse < 0.001f || rowWidthPx == 0) Modifier.weight(1f)
+                    else Modifier.width(lerp(fullPillWidth, pillHeight, collapse))
+                )
                 .fillMaxHeight()
                 .onSizeChanged { barWidthPx = it.width }
         ) {
@@ -398,7 +431,7 @@ private fun GlassNavigationBar(
             )
 
             // The liquid bubble
-            if ((selectedIndex >= 0 || dragging) && itemWidthPx > 0f) {
+            if ((selectedIndex >= 0 || dragging) && itemWidthPx > 0f && collapse < 0.02f) {
                 val pillHeightPx = with(density) { pillHeight.toPx() }
                 val restW = itemWidthPx - with(density) { 4.dp.toPx() }
                 val restH = pillHeightPx - with(density) { 10.dp.toPx() }
@@ -445,6 +478,7 @@ private fun GlassNavigationBar(
             Row(
                 modifier = Modifier
                     .matchParentSize()
+                    .graphicsLayer { alpha = (1f - collapse * 2f).coerceIn(0f, 1f) }
                     .padding(horizontal = 6.dp)
                     .pointerInput(count, itemWidthPx) {
                         if (itemWidthPx <= 0f) return@pointerInput
@@ -575,6 +609,34 @@ private fun GlassNavigationBar(
                     }
                 }
             }
+            // Shrunk: just the current tab's icon; tap to open the bar again
+            if (collapse > 0.5f) {
+                val current = tabItems.getOrNull(selectedIndex.coerceAtLeast(0))
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = ((collapse - 0.5f) * 2f).coerceIn(0f, 1f) }
+                        .clip(pillShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { KingsBarState.collapsed = false },
+                ) {
+                    if (current != null) {
+                        Icon(
+                            painter = painterResource(id = current.iconIdActive),
+                            contentDescription = stringResource(current.titleId),
+                            tint = colors.onSurface,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        if (collapse >= 0.001f && rowWidthPx != 0) {
+            Spacer(Modifier.weight(1f))
         }
 
         // Round glass Search button

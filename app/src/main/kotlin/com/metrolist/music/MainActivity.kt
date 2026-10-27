@@ -1074,7 +1074,9 @@ class MainActivity : FragmentActivity() {
                                 Row {
                                     TopAppBar(
                                         title = {
-                                            if (currentTitleRes == R.string.home) {
+                                            if (currentTitleRes == R.string.filter_library) {
+                                                // Kings Play: the Library screen shows its own big title
+                                            } else if (currentTitleRes == R.string.home) {
                                                 // Kings Play: animated thought instead of "Home"
                                                 com.metrolist.music.ui.theme.KingsHomeThought()
                                             } else {
@@ -1406,7 +1408,7 @@ class MainActivity : FragmentActivity() {
                                             slideOutHorizontally { it / 8 } + fadeOut(tween(200))
                                         }
                                     },
-                                    modifier = Modifier.layerBackdrop(kingsBackdrop).nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+                                    modifier = Modifier.layerBackdrop(kingsBackdrop).nestedScroll(topAppBarScrollBehavior.nestedScrollConnection).nestedScroll(com.metrolist.music.ui.component.KingsBarScroll),
                                 ) {
                                     navigationBuilder(
                                         navController = navController,

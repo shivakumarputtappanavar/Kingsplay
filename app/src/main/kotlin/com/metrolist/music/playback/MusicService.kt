@@ -3784,6 +3784,10 @@ class MusicService :
     ): DataSource.Factory {
         return ResolvingDataSource.Factory(createCacheDataSource()) { dataSpec ->
             val mediaId = dataSpec.key ?: error("No media id")
+            // Kings Play: songs saved on the phone play straight from the file
+            if (mediaId.startsWith("local:")) {
+                return@Factory dataSpec.withUri(android.net.Uri.parse(mediaId.removePrefix("local:")))
+            }
             val storedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
             applyAudioNormalizationBeforePlayback(
                 processor = normalizationProcessor,

@@ -51,12 +51,7 @@ fun LibraryScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (filterType) {
-            LibraryFilter.LIBRARY -> LibraryMixScreen(
-                navController = navController,
-                filterContent = filterContent,
-                viewType = libraryViewType,
-                onViewTypeChange = { libraryViewType = it },
-            )
+            LibraryFilter.LIBRARY -> KingsLibraryOverview(navController = navController, onShowAll = { filterType = it })
             LibraryFilter.PLAYLISTS -> LibraryPlaylistsScreen(
                 navController = navController,
                 filterContent = filterContent,
