@@ -1,0 +1,16 @@
+# Kings Play: fix "Unresolved reference 'toPx'" in KingsLiquid.kt
+# Needs in Downloads: KingsLiquid.kt (fixed version)
+# Run from C:\Projects\KingsPlay :
+#   powershell -ExecutionPolicy Bypass -File .\fix-liquid-lens.ps1
+$ErrorActionPreference = "Stop"
+$dl = Join-Path $env:USERPROFILE "Downloads"
+$target = "app\src\main\kotlin\com\metrolist\music\ui\component\KingsLiquid.kt"
+if (-not (Test-Path $target)) { Write-Host "Run this from C:\Projects\KingsPlay" -ForegroundColor Red; exit 1 }
+$f = Get-ChildItem -Path $dl -Filter "KingsLiquid*.kt" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $f -or -not (Select-String -Path $f.FullName -Pattern "rowHeightPx" -Quiet)) {
+    Write-Host "The fixed KingsLiquid.kt is not in Downloads. Delete old KingsLiquid files and download it again from the chat." -ForegroundColor Red
+    exit 1
+}
+Copy-Item $f.FullName $target -Force
+Write-Host "Fixed KingsLiquid.kt copied ($($f.Name))" -ForegroundColor Green
+Write-Host "Now build again:  .\gradlew.bat assembleIzzyDebug" -ForegroundColor Green
