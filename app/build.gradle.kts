@@ -131,7 +131,10 @@ android {
             if (applicationIdOverride == null) {
                 applicationIdSuffix = ".debug"
             }
-            isDebuggable = true
+            isDebuggable = false // Kings Play: runs as fast as a finished (release) app
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (appNameOverride == null) {
                 resValue("string", "app_name", "Kings Play")
             }

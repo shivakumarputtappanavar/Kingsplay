@@ -104,9 +104,7 @@ fun KingsSmartRefresh() {
         }
         // Fast when the app opens and while touching; 60 Hz when idle
         kingsTouches.onStart { emit(Unit) }.collectLatest {
-            window.kingsApplyRate(fast = true)
-            delay(KingsFastHoldMillis)
-            window.kingsApplyRate(fast = false)
+            window.kingsApplyRate(fast = true) // Kings Play: always 120 Hz while the app is open
         }
     }
 }
