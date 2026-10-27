@@ -5,6 +5,11 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.kingsHeaderParallax
+import com.metrolist.music.ui.component.kingsPlayGlow
+import com.metrolist.music.ui.component.kingsRowAppear
+import com.metrolist.music.ui.component.kingsSongRow
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -191,6 +196,7 @@ fun OnlinePlaylistScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
+        com.metrolist.music.ui.component.KingsPlaylistBackdrop(playlist?.thumbnail, lazyListState)
         LazyColumn(
             state = lazyListState,
             contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime).asPaddingValues(),
@@ -256,7 +262,7 @@ fun OnlinePlaylistScreen(
                                 coroutineScope = coroutineScope,
                                 continuation = viewModel.continuation,
                                 isPodcastPlaylist = isPodcastPlaylist,
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier.animateItem().kingsHeaderParallax(lazyListState),
                             )
                         }
                     }
@@ -277,6 +283,7 @@ fun OnlinePlaylistScreen(
                             isSelected = inSelectMode && songItem.id in selection,
                             modifier =
                                 Modifier
+                                    .kingsSongRow(mediaMetadata?.id == songItem.id)
                                     .combinedClickable(
                                         enabled = !hideExplicit || !songItem.explicit,
                                         onClick = {
@@ -322,7 +329,7 @@ fun OnlinePlaylistScreen(
                                                 }
                                             }
                                         },
-                                    ).animateItem(),
+                                    ).animateItem().kingsRowAppear(),
                             trailingContent = {
                                 if (inSelectMode) {
                                     Checkbox(
@@ -470,6 +477,12 @@ fun OnlinePlaylistScreen(
                             contentDescription = null,
                         )
                     }
+                    // Kings Play: playlist menu moved here (Shuffle is now next to Play)
+                    playlist?.let { pl ->
+                        IconButton(onClick = { menuState.show { YouTubePlaylistMenu(playlist = pl, songs = songs, coroutineScope = coroutineScope, onDismiss = menuState::dismiss) } }) {
+                            Icon(painter = painterResource(R.drawable.more_vert), contentDescription = null)
+                        }
+                    }
                 }
             },
         )
@@ -506,31 +519,14 @@ private fun OnlinePlaylistHeader(
                 .padding(top = 8.dp, bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Surface(
-            modifier =
-                Modifier
-                    .size(240.dp)
-                    .shadow(
-                        elevation = 24.dp,
-                        shape = RoundedCornerShape(3.dp),
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                    ),
-            shape = RoundedCornerShape(3.dp),
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current).data(playlist.thumbnail?.resize(1080, 1080)).build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        com.metrolist.music.ui.component.KingsPlaylistCover(playlist.thumbnail)
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Text(
             text = playlist.title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge, // Kings title
+            fontWeight = FontWeight.Black,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -590,13 +586,7 @@ private fun OnlinePlaylistHeader(
                 append(durationText)
             }
         }
-        Text(
-            text = metadataText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp),
-        )
+        com.metrolist.music.ui.component.KingsMetaPill(metadataText)
 
         Spacer(modifier = Modifier.height(4.dp))
 
@@ -617,7 +607,7 @@ private fun OnlinePlaylistHeader(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Like Button - Smaller secondary button
@@ -659,8 +649,8 @@ private fun OnlinePlaylistHeader(
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp),
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -699,7 +689,7 @@ private fun OnlinePlaylistHeader(
                 },
                 color = MaterialTheme.colorScheme.primary,
                 shape = CircleShape,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(78.dp).kingsPlayGlow(MaterialTheme.colorScheme.primary),
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -714,29 +704,24 @@ private fun OnlinePlaylistHeader(
                 }
             }
 
-            // Menu Button - Smaller secondary button
+            // Kings Play: Shuffle button (opposite the Like button)
             Surface(
                 onClick = {
-                    menuState.show {
-                        YouTubePlaylistMenu(
-                            playlist = playlist,
-                            songs = songs,
-                            coroutineScope = coroutineScope,
-                            onDismiss = menuState::dismiss,
-                        )
+                    if (!isListenTogetherGuest) {
+                        com.metrolist.music.ui.component.kingsShufflePlay(playerConnection, playlist.shuffleEndpoint, playlist.title, songs)
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp),
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.more_vert),
-                        contentDescription = null,
+                        painter = painterResource(R.drawable.shuffle),
+                        contentDescription = "Shuffle",
                         modifier = Modifier.size(24.dp),
                     )
                 }

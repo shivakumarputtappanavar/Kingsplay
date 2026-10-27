@@ -428,25 +428,6 @@ fun YouTubePlaylistMenu(
                                     ),
                                 )
                             }
-                            playlist.shuffleEndpoint?.let { shuffleEndpoint ->
-                                add(
-                                    NewAction(
-                                        icon = {
-                                            Icon(
-                                                painter = painterResource(R.drawable.shuffle),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        },
-                                        text = stringResource(R.string.shuffle),
-                                        onClick = {
-                                            playerConnection.playQueue(YouTubeQueue(shuffleEndpoint))
-                                            onDismiss()
-                                        },
-                                    ),
-                                )
-                            }
                             playlist.radioEndpoint?.let { radioEndpoint ->
                                 add(
                                     NewAction(
