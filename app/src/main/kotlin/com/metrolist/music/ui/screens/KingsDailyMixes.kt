@@ -7,7 +7,8 @@
  *  - Today's Best 5: five josh playlists, a new set every day
  *  - All Josh Mix: ALL josh playlists combined into one, new mix every day
  *  - All Josh playlists: each mix on its own (about 150 songs: trending + new + max 10 old)
- *  - Mashup playlists: two songs in two languages in one track, like Let Me Down Slowly x Main Dhoondne
+ *  - Mashup Mix: ONE playlist of 30 mashups a day, like Shape of You x Until I Found You
+ *  - BGM Music: 30 film BGMs a day from every language
  *  - All DJ Music: DJ songs from every language in one playlist
  * Rules: no devotional songs, no folk songs, and songs from yesterday's mixes are not repeated today.
  * Songs come from YouTube Music searches (smart playlists, not a real AI model).
@@ -175,8 +176,8 @@ private val DjQueries = listOf(
     "english edm dj songs",
 )
 
-/** Every playlist (josh + language mix). */
-private val AllThemes = JoshThemes + MixThemes
+/** Every josh playlist (mashups have their own single playlist: Mashup Mix). */
+private val AllThemes = JoshThemes
 
 /** Insta trending searches; one is used per month. */
 private val InstaQueries = listOf(
@@ -241,6 +242,8 @@ private val Palettes = listOf(
 private val InstaColors = listOf(Color(0xFFFEDA75), Color(0xFFD62976), Color(0xFF4F5BD5))
 private val AllJoshColors = listOf(Color(0xFFFFD23F), Color(0xFFFF4D6D), Color(0xFF7C4DFF))
 private val DjColors = listOf(Color(0xFF00E5FF), Color(0xFF2962FF), Color(0xFF6A00F4))
+private val MashupColors = listOf(Color(0xFFFF8A00), Color(0xFFE91E63), Color(0xFF3F1D6E))
+private val BgmColors = listOf(Color(0xFFFFC107), Color(0xFFB71C1C), Color(0xFF1A0A0A))
 
 private fun paletteFor(i: Int) = Palettes[i % Palettes.size]
 
@@ -397,6 +400,95 @@ private suspend fun loadAllJosh(context: Context): List<MediaMetadata> = withCon
     }
     songs.map { it.toMetadata() }
 }
+
+/**
+ * One special playlist made from many searches (Mashup Mix, BGM Music).
+ * Made once a day and kept the same all day; new songs tomorrow (yesterday's songs are skipped first).
+ */
+private suspend fun loadSpecialMix(
+    context: Context,
+    keyPrefix: String,
+    always: List<String>,
+    pool: List<String>,
+    perDay: Int,
+    count: Int,
+    keep: (SongItem) -> Boolean,
+): List<MediaMetadata> = withContext(Dispatchers.IO) {
+    val day = LocalDate.now().toEpochDay()
+    val key = keyPrefix + day
+    loadSaved(context, key)?.let { return@withContext it }
+
+    val skip = yesterdaysSongs(context)
+    val random = Random(day * 7 + keyPrefix.hashCode())
+    // a different set of searches every day
+    val queries = (always + pool.shuffled(random).take(perDay)).distinct()
+    val lists = coroutineScope {
+        queries.map { q ->
+            listOf(
+                async { runCatching { searchSongs(q, pages = 1) }.getOrDefault(emptyList()) },
+                async { runCatching { searchSongs(q, pages = 2, filter = YouTube.SearchFilter.FILTER_VIDEO) }.getOrDefault(emptyList()) },
+            )
+        }.flatten().awaitAll()
+    }
+    // the top results of every search, taken in turns (most trending first)
+    val mixed = mutableListOf<SongItem>()
+    val max = lists.maxOfOrNull { it.size } ?: 0
+    for (i in 0 until max) lists.forEach { list -> list.getOrNull(i)?.let { mixed += it } }
+    val found = mixed
+        .filter { it.isJoshAllowed() && keep(it) }
+        .distinctBy { it.id }
+        .distinctBy { it.title.lowercase().filter { c -> c.isLetterOrDigit() } }
+    val songs = pickFresh(found, skip, count).shuffled(random)
+    if (songs.isNotEmpty()) {
+        rememberToday(context, songs.map { it.id })
+        save(context, key, keyPrefix, songs)
+    }
+    songs.map { it.toMetadata() }
+}
+
+/**
+ * Mashup Mix: ONE playlist of 30 mashups a day, like "Shape of You x Until I Found You"
+ * or "Let Me Down Slowly x Main Dhoondne Ko Zamaane Mein". Only songs whose name shows a
+ * mashup ("x", "×", "vs", "mashup") are kept.
+ */
+private val MashupAlways = listOf(
+    "shape of you x until i found you mashup",
+    "let me down slowly x main dhoondne ko zamaane mein",
+    "trending mashup songs",
+)
+private val MashupPool = listOf(
+    "english songs mashup", "english mashup trending", "perfect x until i found you mashup",
+    "night changes x perfect mashup", "die with a smile x mashup", "english x hindi mashup",
+    "hindi english mashup", "punjabi english mashup", "bollywood mashup trending",
+    "kannada english mashup", "tamil english mashup", "telugu english mashup",
+    "malayalam english mashup", "hindi punjabi mashup", "mashup reels trending",
+    "lofi mashup english", "love mashup english", "party mashup english",
+)
+
+private suspend fun loadMashupMix(context: Context) = loadSpecialMix(
+    context, "mashup2_", MashupAlways, MashupPool, perDay = 10, count = 30,
+) { it.isMashup() }
+
+/**
+ * BGM Music: background music (BGM) of films from every language, 30 a day.
+ * Only songs whose name says BGM / theme / background music are kept.
+ */
+private val BgmAlways = listOf("trending bgm")
+private val BgmPool = listOf(
+    "kannada mass bgm", "kannada movie bgm", "tamil mass bgm", "tamil movie bgm anirudh",
+    "telugu mass bgm", "telugu movie bgm", "malayalam mass bgm", "malayalam movie bgm",
+    "hindi movie bgm", "bollywood bgm", "punjabi bgm", "marathi movie bgm",
+    "south indian mass bgm", "hero entry bgm", "hollywood movie theme music", "english movie bgm",
+)
+
+private fun SongItem.isBgm(): Boolean {
+    val name = title.lowercase()
+    return "bgm" in name || "theme" in name || "background" in name || "score" in name
+}
+
+private suspend fun loadBgmMix(context: Context) = loadSpecialMix(
+    context, "bgm_", BgmAlways, BgmPool, perDay = 10, count = 30,
+) { it.isBgm() }
 
 /**
  * All DJ Music: DJ songs from every language in one playlist.
@@ -632,7 +724,7 @@ fun KingsJoshScreen(navController: NavController) {
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
                 Text(
-                    "Josh v12 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
+                    "Josh v15 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),
@@ -671,7 +763,7 @@ fun KingsJoshScreen(navController: NavController) {
             WideCard(
                 tag = "ALL ${AllThemes.size} PLAYLISTS IN ONE",
                 title = "All Josh Mix",
-                subtitle = "Every josh + language mix playlist combined · new mix every day",
+                subtitle = "Every josh playlist combined · new mix every day",
                 colors = AllJoshColors,
                 loading = loading == "all",
                 covers = rememberCovers("alljosh", "trending indian party songs", "alljosh_v2_" + LocalDate.now().toEpochDay()),
@@ -687,10 +779,27 @@ fun KingsJoshScreen(navController: NavController) {
                 covers = rememberCovers("alldj", "hindi dj songs", "alldj_" + LocalDate.now().toEpochDay()),
             ) { play("dj", "All DJ Music") { loadAllDj(context) } }
         }
-        listOf("josh" to JoshThemes, "mix" to MixThemes).forEach { (group, themes) ->
-            if (group == "mix") {
-                item(key = "mix_title") { SectionTitle("Mashup playlists", "Two songs, two languages in one · like Let Me Down Slowly × Main Dhoondne") }
-            }
+        item(key = "mashup") {
+            WideCard(
+                tag = "MASHUPS FROM EVERY LANGUAGE",
+                title = "Mashup Mix",
+                subtitle = "30 mashups like Shape of You × Until I Found You · new every day",
+                colors = MashupColors,
+                loading = loading == "mashup",
+                covers = rememberCovers("mashupmix", "english x hindi mashup", "mashup2_" + LocalDate.now().toEpochDay()),
+            ) { play("mashup", "Mashup Mix") { loadMashupMix(context) } }
+        }
+        item(key = "bgm") {
+            WideCard(
+                tag = "BGM FROM EVERY LANGUAGE",
+                title = "BGM Music",
+                subtitle = "30 film BGMs - Kannada, Tamil, Telugu, Hindi & more · new every day",
+                colors = BgmColors,
+                loading = loading == "bgm",
+                covers = rememberCovers("bgmmix", "mass bgm", "bgm_" + LocalDate.now().toEpochDay()),
+            ) { play("bgm", "BGM Music") { loadBgmMix(context) } }
+        }
+        listOf("josh" to JoshThemes).forEach { (group, themes) ->
             themes.chunked(2).forEachIndexed { rowIndex, row ->
                 item(key = "${group}_row_$rowIndex") {
                     Row(
