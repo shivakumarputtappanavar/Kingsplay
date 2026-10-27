@@ -206,13 +206,19 @@ private val AllJoshColors = listOf(Color(0xFFFFD23F), Color(0xFFFF4D6D), Color(0
 
 private fun paletteFor(i: Int) = Palettes[i % Palettes.size]
 
-/** Today's Best 5: changes every day. */
+/** Language of a playlist: "Hindi", "Hindi Remix", "Hindi · Punjabi" -> "Hindi" (Bollywood = Hindi). */
+private fun JoshTheme.language(): String = tag.substringBefore("·").substringBefore(" Remix").trim()
+
+/** Today's Best 5: changes every day, and all 5 are in DIFFERENT languages (only one Hindi/Bollywood). */
 fun todaysBestJosh(): List<JoshTheme> =
-    AllThemes.shuffled(Random(LocalDate.now().toEpochDay())).take(5)
+    AllThemes.shuffled(Random(LocalDate.now().toEpochDay())).distinctBy { it.language() }.take(5)
 
 // ---------------------------------------------------------------- no-repeat memory
 
 private fun prefs(context: Context) = context.getSharedPreferences("kings_josh", Context.MODE_PRIVATE)
+
+/** Saved playlists (song lists) live in their own file so the small settings stay fast. */
+private fun cachePrefs(context: Context) = context.getSharedPreferences("kings_josh_cache", Context.MODE_PRIVATE)
 
 private fun yesterdaysSongs(context: Context): Set<String> {
     val key = "day_" + (LocalDate.now().toEpochDay() - 1)
@@ -225,8 +231,8 @@ private fun rememberToday(context: Context, ids: List<String>) {
     val key = "day_$today"
     val all = p.getStringSet(key, emptySet()).orEmpty() + ids
     val editor = p.edit().putStringSet(key, all)
-    // keep only today and yesterday
-    p.all.keys.filter { it.startsWith("day_") && it != key && it != "day_${today - 1}" }.forEach { editor.remove(it) }
+    // keep only today and yesterday (and remove old saved playlists from earlier versions)
+    p.all.keys.filter { it != key && it != "day_${today - 1}" }.forEach { editor.remove(it) }
     editor.apply()
 }
 
@@ -262,13 +268,24 @@ private const val OldSongs = 10
 private fun String.withYear() = replace("{year}", LocalDate.now().year.toString())
 
 /** One josh playlist: trending + new songs, max 10 old songs, no songs from yesterday first. */
+/** Extra search words; every day each playlist uses different ones, so it finds different songs. */
+private val DayWords = listOf("", "hits", "dance", "party", "viral", "best", "top", "superhit", "dj", "blockbuster", "mass", "chartbusters")
+
 private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMetadata> = withContext(Dispatchers.IO) {
+    // The playlist is made once a day and saved: same songs all day (new order on every tap), new songs tomorrow.
+    val day = LocalDate.now().toEpochDay()
+    val prefix = "theme_" + theme.title.hashCode() + "_"
+    val key = prefix + day
+    loadSaved(context, key)?.let { return@withContext it }
+
+    val random = Random(day * 31 + theme.title.hashCode())
+    val words = DayWords.shuffled(random)
     val skip = yesterdaysSongs(context)
     val (trending, latest, old) = coroutineScope {
         listOf(
-            async { runCatching { searchSongs(theme.trending, pages = 6) }.getOrDefault(emptyList()) },
-            async { runCatching { searchSongs(theme.latest.withYear(), pages = 6) }.getOrDefault(emptyList()) },
-            async { runCatching { searchSongs(theme.old, pages = 1) }.getOrDefault(emptyList()) },
+            async { runCatching { searchSongs((theme.trending + " " + words[0]).trim(), pages = 6) }.getOrDefault(emptyList()) },
+            async { runCatching { searchSongs((theme.latest.withYear() + " " + words[1]).trim(), pages = 6) }.getOrDefault(emptyList()) },
+            async { runCatching { searchSongs((theme.old + " " + words[2]).trim(), pages = 1) }.getOrDefault(emptyList()) },
         ).awaitAll()
     }
     // trending and new songs, taken in turns
@@ -284,8 +301,11 @@ private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMet
         skip,
         OldSongs,
     )
-    val songs = (main + oldOnes).shuffled()
-    rememberToday(context, songs.map { it.id })
+    val songs = (main + oldOnes).shuffled(random)
+    if (songs.isNotEmpty()) {
+        rememberToday(context, songs.map { it.id })
+        save(context, key, prefix, songs)
+    }
     songs.map { it.toMetadata() }
 }
 
@@ -303,7 +323,8 @@ private suspend fun loadAllJosh(context: Context): List<MediaMetadata> = withCon
     val random = Random(day)
     val lists = coroutineScope {
         AllThemes.map { theme ->
-            async { runCatching { searchSongs(theme.trending, pages = 1) }.getOrDefault(emptyList()).shuffled(random) }
+            val word = DayWords[((day + theme.title.length) % DayWords.size).toInt()]
+            async { runCatching { searchSongs((theme.trending + " " + word).trim(), pages = 1) }.getOrDefault(emptyList()).shuffled(random) }
         }.awaitAll()
     }.shuffled(random)
     // take songs in turns from each playlist so the mix has every flavour
@@ -320,7 +341,7 @@ private suspend fun loadAllJosh(context: Context): List<MediaMetadata> = withCon
 
 /** Reads a saved playlist (song list) from the phone. */
 private fun loadSaved(context: Context, key: String): List<MediaMetadata>? {
-    val saved = prefs(context).getString(key, null) ?: return null
+    val saved = cachePrefs(context).getString(key, null) ?: return null
     val arr = runCatching { JSONArray(saved) }.getOrNull() ?: return null
     val list = (0 until arr.length()).map { i ->
         val o = arr.getJSONObject(i)
@@ -348,7 +369,7 @@ private fun save(context: Context, key: String, prefix: String, songs: List<Song
                 .put("thumb", s.thumbnail)
         )
     }
-    val p = prefs(context)
+    val p = cachePrefs(context)
     val editor = p.edit()
     p.all.keys.filter { it.startsWith(prefix) && it != key }.forEach { editor.remove(it) }
     editor.putString(key, arr.toString()).apply()
@@ -450,7 +471,7 @@ fun KingsJoshScreen(navController: NavController) {
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
                 Text(
-                    "Josh v8 · ~150 songs each · shuffle on every tap · no devotional or folk",
+                    "Josh v9 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),
