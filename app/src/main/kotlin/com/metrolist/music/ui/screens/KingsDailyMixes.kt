@@ -7,7 +7,7 @@
  *  - Today's Best 5: five josh playlists, a new set every day
  *  - All Josh Mix: ALL josh playlists combined into one, new mix every day
  *  - All Josh playlists: each mix on its own (about 150 songs: trending + new + max 10 old)
- *  - Language Mix playlists: two languages in one song, like Hindi x English
+ *  - Mashup playlists: two songs in two languages in one track, like Let Me Down Slowly x Main Dhoondne
  *  - All DJ Music: DJ songs from every language in one playlist
  * Rules: no devotional songs, no folk songs, and songs from yesterday's mixes are not repeated today.
  * Songs come from YouTube Music searches (smart playlists, not a real AI model).
@@ -106,6 +106,8 @@ data class JoshTheme(
     val latest: String,
     val old: String,
     val languageMix: Boolean = false,
+    /** more searches (used for mashups, so there are enough songs) */
+    val extra: List<String> = emptyList(),
 )
 
 /** Josh playlists (no folk, no devotional). */
@@ -131,17 +133,40 @@ private val JoshThemes = listOf(
     JoshTheme("Trending English Hits", "English", "trending english songs", "new english songs {year}", "2010s english hits"),
 )
 
-/** Language Mix playlists: songs that mix two languages, like Hindi x English. */
-private val MixThemes = listOf(
-    JoshTheme("Hindi × English", "Hindi English", "hindi english mashup songs", "new hindi english mix songs {year}", "old hindi english mashup", languageMix = true),
-    JoshTheme("Punjabi × English", "Punjabi English", "punjabi english mix songs", "new punjabi english songs {year}", "old punjabi english mashup", languageMix = true),
-    JoshTheme("Kannada × English", "Kannada English", "kannada english mashup songs", "new kannada english mix songs {year}", "old kannada english mashup", languageMix = true),
-    JoshTheme("Tamil × English", "Tamil English", "tamil english mashup songs", "new tamil english mix songs {year}", "old tamil english mashup", languageMix = true),
-    JoshTheme("Telugu × English", "Telugu English", "telugu english mashup songs", "new telugu english mix songs {year}", "old telugu english mashup", languageMix = true),
-    JoshTheme("Malayalam × English", "Malayalam English", "malayalam english mashup songs", "new malayalam english mix songs {year}", "old malayalam english mashup", languageMix = true),
-    JoshTheme("Hindi × Punjabi", "Hindi Punjabi", "hindi punjabi mashup songs", "new hindi punjabi mashup {year}", "old hindi punjabi mashup", languageMix = true),
-    JoshTheme("Desi × English Party", "Desi English", "desi english party mix songs", "new desi english party songs {year}", "old desi english party songs", languageMix = true),
+/**
+ * Language Mix playlists: MASHUPS of two songs in two languages in one track,
+ * like "Let Me Down Slowly x Main Dhoondne Ko Zamaane Mein".
+ * Only songs whose name shows a mashup ("x", "×", "vs", "mashup") are kept.
+ */
+private fun mix(title: String, tag: String, a: String, b: String) = JoshTheme(
+    title = title,
+    tag = tag,
+    trending = "$a $b mashup",
+    latest = "new $a $b mashup {year}",
+    old = "old $a $b mashup",
+    languageMix = true,
+    extra = listOf("$b x $a mashup", "$a x $b mashup songs", "$a $b mashup lofi", "$b $a mashup reels"),
 )
+
+private val MixThemes = listOf(
+    mix("Hindi × English", "Hindi English", "hindi", "english").let {
+        it.copy(extra = it.extra + listOf("let me down slowly x main dhoondne ko zamaane mein", "english x hindi mashup reels"))
+    },
+    mix("Punjabi × English", "Punjabi English", "punjabi", "english"),
+    mix("Kannada × English", "Kannada English", "kannada", "english"),
+    mix("Tamil × English", "Tamil English", "tamil", "english"),
+    mix("Telugu × English", "Telugu English", "telugu", "english"),
+    mix("Malayalam × English", "Malayalam English", "malayalam", "english"),
+    mix("Hindi × Punjabi", "Hindi Punjabi", "hindi", "punjabi"),
+    mix("Bollywood × English", "Desi English", "bollywood", "english"),
+)
+
+/** True if the song name looks like a mashup of two songs (e.g. "Song A x Song B"). */
+private fun SongItem.isMashup(): Boolean {
+    val name = " " + title.lowercase() + " "
+    return " x " in name || "×" in name || " vs " in name || " vs. " in name ||
+        "mashup" in name || "mash up" in name || "mash-up" in name
+}
 
 /** All DJ Music: DJ songs from every language (one search per language). */
 private val DjQueries = listOf(
@@ -251,8 +276,12 @@ private fun rememberToday(context: Context, ids: List<String>) {
 
 // ---------------------------------------------------------------- song loading
 
-private suspend fun searchSongs(query: String, pages: Int): List<SongItem> {
-    val first = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrNull() ?: return emptyList()
+private suspend fun searchSongs(
+    query: String,
+    pages: Int,
+    filter: YouTube.SearchFilter = YouTube.SearchFilter.FILTER_SONG,
+): List<SongItem> {
+    val first = YouTube.search(query, filter).getOrNull() ?: return emptyList()
     val songs = first.items.filterIsInstance<SongItem>().toMutableList()
     var next = first.continuation
     var page = 1
@@ -282,35 +311,52 @@ private fun String.withYear() = replace("{year}", LocalDate.now().year.toString(
 
 /** One josh playlist: trending + new songs, max 10 old songs, no songs from yesterday first. */
 /** Extra search words; every day each playlist uses different ones, so it finds different songs. */
+private val MashupDayWords = listOf("", "lofi", "slowed reverb", "reels", "chill", "viral", "love", "party")
+
 private val DayWords = listOf("", "hits", "dance", "party", "viral", "best", "top", "superhit", "dj", "blockbuster", "mass", "chartbusters")
 
 private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMetadata> = withContext(Dispatchers.IO) {
     // The playlist is made once a day and saved: same songs all day (new order on every tap), new songs tomorrow.
     val day = LocalDate.now().toEpochDay()
-    val prefix = "theme_" + theme.title.hashCode() + "_"
+    val prefix = "theme2_" + theme.title.hashCode() + "_"
     val key = prefix + day
     loadSaved(context, key)?.let { return@withContext it }
 
     val random = Random(day * 31 + theme.title.hashCode())
     val words = DayWords.shuffled(random)
     val skip = yesterdaysSongs(context)
-    val (trending, latest, old) = coroutineScope {
-        listOf(
-            async { runCatching { searchSongs((theme.trending + " " + words[0]).trim(), pages = 6) }.getOrDefault(emptyList()) },
-            async { runCatching { searchSongs((theme.latest.withYear() + " " + words[1]).trim(), pages = 6) }.getOrDefault(emptyList()) },
-            async { runCatching { searchSongs((theme.old + " " + words[2]).trim(), pages = 1) }.getOrDefault(emptyList()) },
-        ).awaitAll()
+    // mashups: day words that fit mashups
+    val dayWord = { i: Int -> if (theme.languageMix) MashupDayWords[((day + i) % MashupDayWords.size).toInt()] else words[i] }
+    val mainQueries = listOf(theme.trending, theme.latest.withYear()) + theme.extra
+    val (mainLists, old) = coroutineScope {
+        val main = mainQueries.flatMapIndexed { i, q ->
+            val query = (q + " " + dayWord(i)).trim()
+            if (theme.languageMix) {
+                // most mashups are uploaded as videos, so search songs AND videos
+                listOf(
+                    async { runCatching { searchSongs(query, pages = 2) }.getOrDefault(emptyList()) },
+                    async { runCatching { searchSongs(query, pages = 3, filter = YouTube.SearchFilter.FILTER_VIDEO) }.getOrDefault(emptyList()) },
+                )
+            } else {
+                listOf(async { runCatching { searchSongs(query, pages = 6) }.getOrDefault(emptyList()) })
+            }
+        }
+        val oldSearch = async { runCatching { searchSongs((theme.old + " " + dayWord(9)).trim(), pages = 1) }.getOrDefault(emptyList()) }
+        main.awaitAll() to oldSearch.await()
     }
-    // trending and new songs, taken in turns
+    // songs from every search, taken in turns
     val mainFound = mutableListOf<SongItem>()
-    for (i in 0 until maxOf(trending.size, latest.size)) {
-        trending.getOrNull(i)?.let { mainFound += it }
-        latest.getOrNull(i)?.let { mainFound += it }
-    }
-    val main = pickFresh(mainFound.filter { it.isJoshAllowed() }.distinctBy { it.id }, skip, MainSongs)
+    val most = mainLists.maxOfOrNull { it.size } ?: 0
+    for (i in 0 until most) mainLists.forEach { list -> list.getOrNull(i)?.let { mainFound += it } }
+    val fits = { s: SongItem -> s.isJoshAllowed() && (!theme.languageMix || s.isMashup()) }
+    val main = pickFresh(
+        mainFound.filter(fits).distinctBy { it.id }.distinctBy { it.title.lowercase().filter { c -> c.isLetterOrDigit() } },
+        skip,
+        MainSongs,
+    )
     val mainIds = main.map { it.id }.toSet()
     val oldOnes = pickFresh(
-        old.filter { it.isJoshAllowed() && it.id !in mainIds }.distinctBy { it.id }.shuffled(),
+        old.filter { fits(it) && it.id !in mainIds }.distinctBy { it.id }.shuffled(),
         skip,
         OldSongs,
     )
@@ -478,7 +524,7 @@ private fun rememberCovers(id: String, query: String, savedKey: String? = null):
     return covers
 }
 
-private fun themeSavedKey(theme: JoshTheme) = "theme_" + theme.title.hashCode() + "_" + LocalDate.now().toEpochDay()
+private fun themeSavedKey(theme: JoshTheme) = "theme2_" + theme.title.hashCode() + "_" + LocalDate.now().toEpochDay()
 
 /** One cover picture filling the space. */
 @Composable
@@ -586,7 +632,7 @@ fun KingsJoshScreen(navController: NavController) {
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
                 Text(
-                    "Josh v11 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
+                    "Josh v12 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),
@@ -643,7 +689,7 @@ fun KingsJoshScreen(navController: NavController) {
         }
         listOf("josh" to JoshThemes, "mix" to MixThemes).forEach { (group, themes) ->
             if (group == "mix") {
-                item(key = "mix_title") { SectionTitle("Language Mix playlists", "Two languages in one, like Hindi × English") }
+                item(key = "mix_title") { SectionTitle("Mashup playlists", "Two songs, two languages in one · like Let Me Down Slowly × Main Dhoondne") }
             }
             themes.chunked(2).forEachIndexed { rowIndex, row ->
                 item(key = "${group}_row_$rowIndex") {
