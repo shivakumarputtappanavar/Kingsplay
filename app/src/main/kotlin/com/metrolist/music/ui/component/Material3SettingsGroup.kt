@@ -45,6 +45,7 @@ fun Material3SettingsGroup(
     items: List<Material3SettingsItem>,
     useLowContrast: Boolean = false
 ) {
+    val kingsBubble = rememberKingsBubble()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -61,7 +62,7 @@ fun Material3SettingsGroup(
 
         // Settings items
         Column(
-            modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().kingsBubbleHost(kingsBubble, 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items.forEachIndexed { index, item ->
@@ -73,9 +74,11 @@ fun Material3SettingsGroup(
                 }
 
                 Card(
-                    modifier = Modifier
+                modifier = Modifier
                         .fillMaxWidth()
-                        .animateContentSize(),
+                        .animateContentSize()
+                        .kingsLiquidPress(24.dp)
+                        .kingsBubbleItem(kingsBubble, index, enabled = item.enabled && item.onClick != null) { item.onClick?.invoke() },
                     shape = shape,
                     colors = CardDefaults.cardColors(
                         containerColor = if (!useLowContrast) {

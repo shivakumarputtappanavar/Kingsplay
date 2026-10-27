@@ -197,6 +197,20 @@ fun KingsMetaPill(text: String) {
     }
 }
 
+/** Soft glow around a rounded cover (used on your own / downloaded / liked playlist pages). */
+fun Modifier.kingsCoverRing(color: Color, corner: Dp = 28.dp): Modifier = drawBehind {
+    val r = corner.toPx()
+    for (i in 1..7) {
+        val grow = i * 4.dp.toPx()
+        drawRoundRect(
+            color = color.copy(alpha = 0.08f * (8 - i) / 7f),
+            topLeft = Offset(-grow, -grow + 6.dp.toPx()),
+            size = Size(size.width + grow * 2, size.height + grow * 2),
+            cornerRadius = CornerRadius(r + grow, r + grow),
+        )
+    }
+}
+
 /** Soft rings of glow around the big Play button. */
 fun Modifier.kingsPlayGlow(color: Color): Modifier = drawBehind {
     for (i in 1..5) {

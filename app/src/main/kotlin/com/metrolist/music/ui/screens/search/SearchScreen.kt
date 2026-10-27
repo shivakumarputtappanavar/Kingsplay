@@ -5,6 +5,9 @@
 
 package com.metrolist.music.ui.screens.search
 
+import com.metrolist.music.ui.component.kingsLiquidPress
+import androidx.compose.ui.unit.dp
+
 import com.metrolist.music.ui.theme.kingsSearchCapsule
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -182,7 +185,7 @@ fun SearchScreen(
             TopAppBar(
                 title = {
                     Row(
-                        modifier = Modifier.fillMaxWidth().kingsSearchCapsule(),
+                        modifier = Modifier.fillMaxWidth().kingsSearchCapsule().kingsLiquidPress(28.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         BasicTextField(

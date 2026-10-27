@@ -43,6 +43,7 @@ private fun NewActionButton(
     onClick: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    bubble: KingsBubbleState? = null,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
@@ -70,6 +71,8 @@ private fun NewActionButton(
     Card(
         modifier =
             modifier
+                .kingsLiquidPress(16.dp)
+                .kingsBubbleItem(bubble, text, enabled) { performAction = true }
                 .clickable(enabled = enabled) { performAction = true },
         colors =
             CardDefaults.cardColors(
@@ -115,10 +118,11 @@ fun NewActionGrid(
     modifier: Modifier = Modifier,
     columns: Int = 3,
 ) {
+    val kingsBubble = rememberKingsBubble()
     val rows = actions.chunked(columns)
 
     Column(
-        modifier = modifier,
+        modifier = modifier.kingsBubbleHost(kingsBubble, 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         rows.forEach { row ->
@@ -132,6 +136,7 @@ fun NewActionGrid(
                         onClick = action.onClick,
                         modifier = Modifier.weight(1f),
                         enabled = action.enabled,
+                        bubble = kingsBubble,
                         backgroundColor =
                             if (action.backgroundColor !=
                                 Color.Unspecified

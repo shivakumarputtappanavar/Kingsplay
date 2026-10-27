@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.kingsCoverRing
+import com.metrolist.music.ui.component.kingsHeaderParallax
+import com.metrolist.music.ui.component.kingsPlayGlow
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -499,7 +503,7 @@ fun LocalPlaylistScreen(
                                 onshowDeletePlaylistDialog = { showDeletePlaylistDialog = true },
                                 onStartSearch = { isSearching = true },
                                 snackbarHostState = snackbarHostState,
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier.animateItem().kingsHeaderParallax(lazyListState),
                             )
                         }
                     }
@@ -1054,12 +1058,9 @@ fun LocalPlaylistHeader(
                     Surface(
                         modifier =
                             Modifier
-                                .size(240.dp)
-                                .shadow(
-                                    elevation = 16.dp,
-                                    shape = RoundedCornerShape(3.dp),
-                                ),
-                        shape = RoundedCornerShape(3.dp),
+                                .size(256.dp)
+                                .kingsCoverRing(MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(28.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                     ) {
                         Box(
@@ -1080,13 +1081,9 @@ fun LocalPlaylistHeader(
                     Surface(
                         modifier =
                             Modifier
-                                .size(240.dp)
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(3.dp),
-                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                ),
-                        shape = RoundedCornerShape(3.dp),
+                                .size(256.dp)
+                                .kingsCoverRing(MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(28.dp),
                     ) {
                         AsyncImage(
                             model = overrideThumbnail.value ?: playlist.thumbnails[0],
@@ -1149,13 +1146,9 @@ fun LocalPlaylistHeader(
                     Surface(
                         modifier =
                             Modifier
-                                .size(240.dp)
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(3.dp),
-                                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                ),
-                        shape = RoundedCornerShape(3.dp),
+                                .size(256.dp)
+                                .kingsCoverRing(MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(28.dp),
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             listOf(
@@ -1171,7 +1164,7 @@ fun LocalPlaylistHeader(
                                     modifier =
                                         Modifier
                                             .align(alignment)
-                                            .size(120.dp),
+                                            .fillMaxSize(0.5f),
                                 )
                             }
                         }
@@ -1231,8 +1224,8 @@ fun LocalPlaylistHeader(
         // Playlist Name
         Text(
             text = playlist.playlist.name,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge, // Kings title
+            fontWeight = FontWeight.Black,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -1317,7 +1310,7 @@ fun LocalPlaylistHeader(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Shuffle Button - Smaller secondary button
@@ -1331,8 +1324,8 @@ fun LocalPlaylistHeader(
                     )
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp),
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -1358,7 +1351,7 @@ fun LocalPlaylistHeader(
                 },
                 color = MaterialTheme.colorScheme.primary,
                 shape = CircleShape,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(78.dp).kingsPlayGlow(MaterialTheme.colorScheme.primary),
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -1429,8 +1422,8 @@ fun LocalPlaylistHeader(
                     }
                 },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp),
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

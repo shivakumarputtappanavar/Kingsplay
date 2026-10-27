@@ -262,7 +262,7 @@ inline fun ListItem(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = if (isActive) {
-            modifier // playing highlight
+            modifier.kingsLiquidPress(8.dp).kingsRowAppear() // playing highlight
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(8.dp))
@@ -272,13 +272,13 @@ inline fun ListItem(
                         else MaterialTheme.colorScheme.secondaryContainer
                 )
         } else if (isSelected == true) {
-            modifier // inactive selected
+            modifier.kingsLiquidPress(8.dp).kingsRowAppear() // inactive selected
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.4f))
         } else {
-            modifier // default
+            modifier.kingsLiquidPress(8.dp).kingsRowAppear() // default
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
         }
@@ -411,10 +411,12 @@ fun GridItem(
     Column(
         modifier = if (fillMaxWidth) {
             modifier
+                .kingsLiquidPress(20.dp)
                 .padding(12.dp)
                 .fillMaxWidth()
         } else {
             modifier
+                .kingsLiquidPress(20.dp)
                 .padding(12.dp)
                 .width(gridHeight * thumbnailRatio)
         }

@@ -30,8 +30,9 @@ import androidx.compose.ui.unit.dp
 fun Material3MenuGroup(
     items: List<Material3MenuItemData>
 ) {
+    val kingsBubble = rememberKingsBubble()
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().kingsBubbleHost(kingsBubble, 24.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         items.forEachIndexed { index, item ->
@@ -45,7 +46,9 @@ fun Material3MenuGroup(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize(),
+                    .animateContentSize()
+                    .kingsLiquidPress(24.dp)
+                    .kingsBubbleItem(kingsBubble, index, enabled = item.onClick != null) { item.onClick?.invoke() },
                 shape = shape,
                 colors = item.cardColors ?: CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)

@@ -329,7 +329,7 @@ fun OnlinePlaylistScreen(
                                                 }
                                             }
                                         },
-                                    ).animateItem().kingsRowAppear(),
+                                    ).animateItem(),
                             trailingContent = {
                                 if (inSelectMode) {
                                     Checkbox(

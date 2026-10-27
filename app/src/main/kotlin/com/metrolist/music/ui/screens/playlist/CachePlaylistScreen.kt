@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.kingsCoverRing
+import com.metrolist.music.ui.component.kingsHeaderParallax
+import com.metrolist.music.ui.component.kingsPlayGlow
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -219,7 +223,7 @@ fun CachePlaylistScreen(
                             songs = filteredSongs,
                             context = context,
                             menuState = menuState,
-                            modifier = Modifier.animateItem()
+                            modifier = Modifier.animateItem().kingsHeaderParallax(lazyListState)
                         )
                     }
                 }
@@ -489,13 +493,9 @@ private fun CachePlaylistHeader(
         ) {
             androidx.compose.material3.Surface(
                 modifier = Modifier
-                    .size(240.dp)
-                    .shadow(
-                        elevation = 24.dp,
-                        shape = RoundedCornerShape(3.dp),
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                    ),
-                shape = RoundedCornerShape(3.dp)
+                    .size(256.dp)
+                    .kingsCoverRing(MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(28.dp)
             ) {
                 AsyncImage(
                     model = songs.first().thumbnailUrl,
@@ -509,8 +509,8 @@ private fun CachePlaylistHeader(
         // Playlist Name
         Text(
             text = stringResource(R.string.cached_playlist),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge, // Kings title
+            fontWeight = FontWeight.Black,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -533,7 +533,7 @@ private fun CachePlaylistHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Shuffle Button - Smaller secondary button
@@ -547,8 +547,8 @@ private fun CachePlaylistHeader(
                     )
                 },
                 shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -574,7 +574,7 @@ private fun CachePlaylistHeader(
                 },
                 color = MaterialTheme.colorScheme.primary,
                 shape = androidx.compose.foundation.shape.CircleShape,
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier.size(78.dp).kingsPlayGlow(MaterialTheme.colorScheme.primary)
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -609,8 +609,8 @@ private fun CachePlaylistHeader(
                     }
                 },
                 shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

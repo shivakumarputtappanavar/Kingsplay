@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.playlist
 
+import com.metrolist.music.ui.component.kingsCoverRing
+import com.metrolist.music.ui.component.kingsHeaderParallax
+import com.metrolist.music.ui.component.kingsPlayGlow
+
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -525,7 +529,7 @@ fun AutoPlaylistScreen(
                                 downloadState = downloadState,
                                 onShowRemoveDownloadDialog = { showRemoveDownloadDialog = true },
                                 menuState = menuState,
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier.animateItem().kingsHeaderParallax(state),
                             )
                         }
                     }
@@ -861,13 +865,9 @@ private fun AutoPlaylistHeader(
             androidx.compose.material3.Surface(
                 modifier =
                     Modifier
-                        .size(240.dp)
-                        .shadow(
-                            elevation = 24.dp,
-                            shape = RoundedCornerShape(3.dp),
-                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                        ),
-                shape = RoundedCornerShape(3.dp),
+                        .size(256.dp)
+                        .kingsCoverRing(MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(28.dp),
             ) {
                 AsyncImage(
                     model = songs[0].song.thumbnailUrl,
@@ -881,8 +881,8 @@ private fun AutoPlaylistHeader(
         // Playlist Name
         Text(
             text = name,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge, // Kings title
+            fontWeight = FontWeight.Black,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -913,7 +913,7 @@ private fun AutoPlaylistHeader(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Shuffle Button - Smaller secondary button
@@ -927,8 +927,8 @@ private fun AutoPlaylistHeader(
                     )
                 },
                 shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp),
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -954,7 +954,7 @@ private fun AutoPlaylistHeader(
                 },
                 color = MaterialTheme.colorScheme.primary,
                 shape = androidx.compose.foundation.shape.CircleShape,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(78.dp).kingsPlayGlow(MaterialTheme.colorScheme.primary),
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -1009,8 +1009,8 @@ private fun AutoPlaylistHeader(
                     }
                 },
                 shape = androidx.compose.foundation.shape.CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f), // Kings glass
+                modifier = Modifier.size(56.dp),
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
