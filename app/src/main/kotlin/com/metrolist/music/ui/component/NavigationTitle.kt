@@ -6,6 +6,11 @@
 package com.metrolist.music.ui.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,6 +61,15 @@ fun NavigationTitle(
             .padding(horizontal = 12.dp, vertical = 12.dp)
     ) {
         thumbnail?.invoke()
+        // Kings Play: small coloured accent before section titles
+        if (thumbnail == null) {
+            Box(
+                Modifier
+                    .size(width = 4.dp, height = 22.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)))
+            )
+        }
 
         Column(
             verticalArrangement = Arrangement.Center,
@@ -72,8 +86,8 @@ fun NavigationTitle(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
             )

@@ -35,7 +35,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.metrolist.music.R
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.Dp
+import com.metrolist.music.ui.theme.kingsCoverGlow
+import com.metrolist.music.ui.theme.rememberCoverGlowColor
 import com.metrolist.music.db.entities.Song
+import com.metrolist.innertube.models.SongItem
+import com.metrolist.innertube.models.YTItem
 
 /** Size of one Quick picks card (artwork + two lines of text). */
 val KingsQuickPickWidth = 162.dp
@@ -54,6 +60,7 @@ fun KingsQuickPickCard(
     Column(modifier = modifier.padding(horizontal = 6.dp)) {
         Box(
             modifier = Modifier
+                .kingsCoverGlow(rememberCoverGlowColor(song.song.thumbnailUrl), 14.dp)
                 .size(150.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -67,6 +74,19 @@ fun KingsQuickPickCard(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(150.dp),
+            )
+            // Kings Play: glass shine and edge
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.White.copy(alpha = 0.22f),
+                            0.35f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = 0.18f),
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(14.dp)),
             )
             if (isActive) {
                 Box(
@@ -123,3 +143,94 @@ fun KingsQuickPickCard(
         }
     }
 }
+
+/** Big square card for YouTube Music songs on Home (same look as Quick picks). */
+@Composable
+fun KingsYTSongCard(
+    item: YTItem,
+    modifier: Modifier = Modifier,
+    isActive: Boolean = false,
+    isPlaying: Boolean = false,
+    isSwipeable: Boolean = false,
+    trailingContent: @Composable RowScope.() -> Unit = {},
+) {
+    Column(modifier = modifier.padding(horizontal = 6.dp)) {
+        Box(
+            modifier = Modifier
+                .kingsCoverGlow(rememberCoverGlowColor(item.thumbnail), 14.dp)
+                .size(150.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .then(
+                    if (isActive) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp))
+                    else Modifier
+                ),
+        ) {
+            AsyncImage(
+                model = item.thumbnail,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(150.dp),
+            )
+            // Kings Play: glass shine and edge
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.White.copy(alpha = 0.22f),
+                            0.35f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = 0.18f),
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(14.dp)),
+            )
+            if (isActive) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.45f)),
+                ) {
+                    Icon(
+                        painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+        Row(
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    item.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    (item as? SongItem)?.artists?.joinToString(", ") { it.name }.orEmpty(),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Row(modifier = Modifier.size(width = 32.dp, height = 40.dp)) {
+                trailingContent()
+            }
+        }
+    }
+}
+
+/** Soft glow in the cover's colour behind any Home card (albums, playlists, new releases). */
+@Composable
+fun kingsCardGlow(url: String?, corner: Dp = 16.dp): Modifier =
+    Modifier.kingsCoverGlow(rememberCoverGlowColor(url), corner, strength = 0.8f)

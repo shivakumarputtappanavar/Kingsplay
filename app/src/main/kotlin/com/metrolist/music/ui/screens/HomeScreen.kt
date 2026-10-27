@@ -924,7 +924,7 @@ fun HomeScreen(
             thumbnailRatio = 1f,
             modifier =
                 Modifier
-                    .combinedClickable(
+                    .then(com.metrolist.music.ui.component.kingsCardGlow(item.thumbnail)).combinedClickable(
                         onClick = {
                             when (item) {
                                 is SongItem -> {
@@ -1793,7 +1793,7 @@ fun HomeScreen(
                                 item(key = "quick_picks_list") {
                                     LazyHorizontalGrid(
                                         state = quickPicksLazyGridState,
-                                        rows = GridCells.Fixed(4),
+                                        rows = GridCells.Fixed(1),
                                         flingBehavior = rememberSnapFlingBehavior(quickPicksSnapLayoutInfoProvider),
                                         contentPadding =
                                             WindowInsets.systemBars
@@ -1802,7 +1802,7 @@ fun HomeScreen(
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
-                                                .height(ListItemHeight * 4),
+                                                .height(com.metrolist.music.ui.component.KingsQuickPickHeight),
                                         ) {
                                             items(
                                                 items = quickPicks.distinctBy { it.id },
@@ -1813,7 +1813,7 @@ fun HomeScreen(
                                                 .song(originalSong.id)
                                                 .collectAsStateWithLifecycle(initialValue = originalSong)
 
-                                            SongListItem(
+                                            com.metrolist.music.ui.component.KingsQuickPickCard(
                                                 song = song!!,
                                                 showInLibraryIcon = true,
                                                 isActive = song!!.id == mediaMetadata?.id,
@@ -1838,7 +1838,7 @@ fun HomeScreen(
                                                 },
                                                 modifier =
                                                     Modifier
-                                                        .width(horizontalLazyGridItemWidth)
+                                                        .width(com.metrolist.music.ui.component.KingsQuickPickWidth)
                                                         .combinedClickable(
                                                             onClick = {
                                                                 if (!isListenTogetherGuest) {
@@ -2357,7 +2357,7 @@ fun HomeScreen(
                                     item(key = "home_section_list_${section.index}") {
                                         LazyHorizontalGrid(
                                             state = remember("section_${section.index}_grid") { LazyGridState() },
-                                            rows = GridCells.Fixed(4),
+                                            rows = GridCells.Fixed(1),
                                             contentPadding =
                                                 WindowInsets.systemBars
                                                     .only(WindowInsetsSides.Horizontal)
@@ -2365,13 +2365,13 @@ fun HomeScreen(
                                             modifier =
                                                 Modifier
                                                     .fillMaxWidth()
-                                                    .height(ListItemHeight * 4),
+                                                    .height(com.metrolist.music.ui.component.KingsQuickPickHeight),
                                         ) {
                                             items(
                                                 items = sectionSongs.distinctBy { it.id },
                                                 key = { "home_section_${section.index}_song_${it.id}" },
                                             ) { song ->
-                                                YouTubeListItem(
+                                                com.metrolist.music.ui.component.KingsYTSongCard(
                                                     item = song,
                                                     isActive = song.id == mediaMetadata?.id,
                                                     isPlaying = isPlaying,
@@ -2395,7 +2395,7 @@ fun HomeScreen(
                                                     },
                                                     modifier =
                                                         Modifier
-                                                            .width(horizontalLazyGridItemWidth)
+                                                            .width(com.metrolist.music.ui.component.KingsQuickPickWidth)
                                                             .combinedClickable(
                                                                 onClick = {
                                                                     if (!isListenTogetherGuest) {
