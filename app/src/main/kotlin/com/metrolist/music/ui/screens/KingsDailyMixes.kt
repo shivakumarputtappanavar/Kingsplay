@@ -109,6 +109,8 @@ data class JoshTheme(
     val languageMix: Boolean = false,
     /** more searches (used for mashups, so there are enough songs) */
     val extra: List<String> = emptyList(),
+    /** love / romance playlist (60 songs a day) */
+    val love: Boolean = false,
 )
 
 /** Josh playlists (no folk, no devotional). */
@@ -179,6 +181,103 @@ private val DjQueries = listOf(
 /** Every josh playlist (mashups have their own single playlist: Mashup Mix). */
 private val AllThemes = JoshThemes
 
+/** Love Songs: romantic songs only, one playlist per language, 60 songs a day. */
+private fun loveTheme(title: String, lang: String, word: String = lang.lowercase()) = JoshTheme(
+    title = title,
+    tag = lang,
+    trending = "$word romantic songs",
+    latest = "new $word love songs {year}",
+    old = "old $word romantic songs",
+    extra = listOf("$word love songs hits", "$word romantic melody songs"),
+    love = true,
+)
+
+private val LoveThemes = listOf(
+    loveTheme("Hindi Love Songs", "Hindi"),
+    loveTheme("Kannada Love Songs", "Kannada"),
+    loveTheme("Tamil Love Songs", "Tamil"),
+    loveTheme("Telugu Love Songs", "Telugu"),
+    loveTheme("Malayalam Love Songs", "Malayalam"),
+    loveTheme("Punjabi Love Songs", "Punjabi"),
+    loveTheme("Marathi Love Songs", "Marathi"),
+    loveTheme("English Love Songs", "English"),
+)
+
+// ---------------------------------------------------------------- one language only
+
+/** Words and scripts that show a song's language. */
+private val LanguageWords = mapOf(
+    "Hindi" to listOf("hindi", "bollywood"),
+    "Punjabi" to listOf("punjabi"),
+    "Kannada" to listOf("kannada", "sandalwood"),
+    "Tamil" to listOf("tamil", "kollywood"),
+    "Telugu" to listOf("telugu", "tollywood"),
+    "Malayalam" to listOf("malayalam", "mollywood"),
+    "Marathi" to listOf("marathi"),
+    "English" to listOf("english"),
+    "Bengali" to listOf("bengali", "bangla"),
+    "Gujarati" to listOf("gujarati"),
+    "Bhojpuri" to listOf("bhojpuri"),
+)
+
+/** Unicode script ranges of each language (Hindi and Marathi share Devanagari). */
+private val LanguageScripts = mapOf(
+    "Hindi" to 0x0900..0x097F,
+    "Marathi" to 0x0900..0x097F,
+    "Punjabi" to 0x0A00..0x0A7F,
+    "Gujarati" to 0x0A80..0x0AFF,
+    "Bengali" to 0x0980..0x09FF,
+    "Tamil" to 0x0B80..0x0BFF,
+    "Telugu" to 0x0C00..0x0C7F,
+    "Kannada" to 0x0C80..0x0CFF,
+    "Malayalam" to 0x0D00..0x0D7F,
+)
+
+/** Singers / composers who work almost only in one language (exact names, to catch songs whose name shows no language). */
+private val LanguageArtists = mapOf(
+    "Punjabi" to setOf("diljit dosanjh", "sidhu moose wala", "karan aujla", "ap dhillon", "shubh", "ammy virk", "jassie gill", "parmish verma", "gurnam bhullar", "satinder sartaaj"),
+    "Tamil" to setOf("anirudh ravichander", "sid sriram", "yuvan shankar raja", "harris jayaraj", "g. v. prakash kumar", "hiphop tamizha", "d. imman"),
+    "Telugu" to setOf("devi sri prasad", "thaman s", "s. thaman", "mangli", "rahul sipligunj", "m. m. keeravaani"),
+    "Kannada" to setOf("arjun janya", "v. harikrishna", "vijay prakash", "ravi basrur", "chandan shetty", "ajaneesh loknath", "charan raj"),
+    "Malayalam" to setOf("sushin shyam", "vineeth sreenivasan", "dabzee", "hesham abdul wahab", "shaan rahman"),
+    "Hindi" to setOf("arijit singh", "jubin nautiyal", "vishal mishra", "tanishk bagchi", "sachet tandon", "darshan raval", "pritam", "mithoon", "sachin-jigar", "vishal-shekhar", "atif aslam", "shilpa rao", "amitabh bhattacharya", "irshad kamil", "kumaar", "javed ali", "mohit chauhan", "kk"),
+    "English" to setOf("taylor swift", "ed sheeran", "justin bieber", "the weeknd", "dua lipa", "bruno mars", "billie eilish", "imagine dragons"),
+)
+
+/** True if the song looks like it is in [lang] (and not in another language). */
+private fun SongItem.isInLanguage(lang: String): Boolean {
+    val artistNames = artists.map { it.name.lowercase().trim() }
+    val artistText = artistNames.joinToString(" ")
+    val text = (title + " " + (album?.name ?: "") + " " + artistText).lowercase()
+    // another language written in the name or album -> not this playlist
+    for ((other, words) in LanguageWords) {
+        if (other == lang) continue
+        if (lang == "Hindi" && other == "English") continue // "(Hindi Version)" etc. never says English
+        if (words.any { it in text }) return false
+    }
+    // another Indian script in the name -> not this playlist
+    val own = LanguageScripts[lang]
+    for (ch in title) {
+        val code = ch.code
+        if (code < 0x0900 || code > 0x0D7F) continue
+        if (own == null || code !in own) return false
+    }
+    // a well-known singer of another language -> not this playlist
+    for ((other, names) in LanguageArtists) {
+        if (other == lang) continue
+        if (artistNames.any { it in names }) {
+            // unless the song clearly says it is in this language
+            val mine = LanguageWords[lang].orEmpty()
+            if (mine.none { it in text }) return false
+        }
+    }
+    return true
+}
+
+/** The one language of a playlist, or null for mixed playlists. */
+private fun JoshTheme.onlyLanguage(): String? =
+    if (languageMix) null else tag.takeIf { it in LanguageWords.keys }
+
 /** Insta trending searches; one is used per month. */
 private val InstaQueries = listOf(
     "instagram reels trending songs",
@@ -241,6 +340,12 @@ private val Palettes = listOf(
 )
 private val InstaColors = listOf(Color(0xFFFEDA75), Color(0xFFD62976), Color(0xFF4F5BD5))
 private val AllJoshColors = listOf(Color(0xFFFFD23F), Color(0xFFFF4D6D), Color(0xFF7C4DFF))
+private val LoveColors = listOf(
+    listOf(Color(0xFFFF4F8B), Color(0xFF6A0F2E)),
+    listOf(Color(0xFFFF7A9C), Color(0xFF5C1438)),
+    listOf(Color(0xFFE040FB), Color(0xFF3B0A4F)),
+    listOf(Color(0xFFFF6E6E), Color(0xFF5C0A1A)),
+)
 private val DjColors = listOf(Color(0xFF00E5FF), Color(0xFF2962FF), Color(0xFF6A00F4))
 private val MashupColors = listOf(Color(0xFFFF8A00), Color(0xFFE91E63), Color(0xFF3F1D6E))
 private val BgmColors = listOf(Color(0xFFFFC107), Color(0xFFB71C1C), Color(0xFF1A0A0A))
@@ -316,12 +421,14 @@ private fun String.withYear() = replace("{year}", LocalDate.now().year.toString(
 /** Extra search words; every day each playlist uses different ones, so it finds different songs. */
 private val MashupDayWords = listOf("", "lofi", "slowed reverb", "reels", "chill", "viral", "love", "party")
 
+private val LoveDayWords = listOf("", "hits", "melody", "best", "top", "superhit", "latest", "duet", "heart touching", "evergreen")
+
 private val DayWords = listOf("", "hits", "dance", "party", "viral", "best", "top", "superhit", "dj", "blockbuster", "mass", "chartbusters")
 
 private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMetadata> = withContext(Dispatchers.IO) {
     // The playlist is made once a day and saved: same songs all day (new order on every tap), new songs tomorrow.
     val day = LocalDate.now().toEpochDay()
-    val prefix = "theme2_" + theme.title.hashCode() + "_"
+    val prefix = "theme4_" + theme.title.hashCode() + "_"
     val key = prefix + day
     loadSaved(context, key)?.let { return@withContext it }
 
@@ -329,7 +436,14 @@ private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMet
     val words = DayWords.shuffled(random)
     val skip = yesterdaysSongs(context)
     // mashups: day words that fit mashups
-    val dayWord = { i: Int -> if (theme.languageMix) MashupDayWords[((day + i) % MashupDayWords.size).toInt()] else words[i] }
+    val loveWords = LoveDayWords.shuffled(random)
+    val dayWord = { i: Int ->
+        when {
+            theme.languageMix -> MashupDayWords[((day + i) % MashupDayWords.size).toInt()]
+            theme.love -> loveWords[i % loveWords.size]
+            else -> words[i % words.size]
+        }
+    }
     val mainQueries = listOf(theme.trending, theme.latest.withYear()) + theme.extra
     val (mainLists, old) = coroutineScope {
         val main = mainQueries.flatMapIndexed { i, q ->
@@ -341,7 +455,7 @@ private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMet
                     async { runCatching { searchSongs(query, pages = 3, filter = YouTube.SearchFilter.FILTER_VIDEO) }.getOrDefault(emptyList()) },
                 )
             } else {
-                listOf(async { runCatching { searchSongs(query, pages = 6) }.getOrDefault(emptyList()) })
+                listOf(async { runCatching { searchSongs(query, pages = if (theme.love) 3 else 6) }.getOrDefault(emptyList()) })
             }
         }
         val oldSearch = async { runCatching { searchSongs((theme.old + " " + dayWord(9)).trim(), pages = 1) }.getOrDefault(emptyList()) }
@@ -351,17 +465,20 @@ private suspend fun loadTheme(context: Context, theme: JoshTheme): List<MediaMet
     val mainFound = mutableListOf<SongItem>()
     val most = mainLists.maxOfOrNull { it.size } ?: 0
     for (i in 0 until most) mainLists.forEach { list -> list.getOrNull(i)?.let { mainFound += it } }
-    val fits = { s: SongItem -> s.isJoshAllowed() && (!theme.languageMix || s.isMashup()) }
+    val lang = theme.onlyLanguage()
+    val fits = { s: SongItem ->
+        s.isJoshAllowed() && (!theme.languageMix || s.isMashup()) && (lang == null || s.isInLanguage(lang))
+    }
     val main = pickFresh(
         mainFound.filter(fits).distinctBy { it.id }.distinctBy { it.title.lowercase().filter { c -> c.isLetterOrDigit() } },
         skip,
-        MainSongs,
+        if (theme.love) 52 else MainSongs, // love: 52 + 8 older = 60 songs
     )
     val mainIds = main.map { it.id }.toSet()
     val oldOnes = pickFresh(
         old.filter { fits(it) && it.id !in mainIds }.distinctBy { it.id }.shuffled(),
         skip,
-        OldSongs,
+        if (theme.love) 8 else OldSongs,
     )
     val songs = (main + oldOnes).shuffled(random)
     if (songs.isNotEmpty()) {
@@ -616,7 +733,7 @@ private fun rememberCovers(id: String, query: String, savedKey: String? = null):
     return covers
 }
 
-private fun themeSavedKey(theme: JoshTheme) = "theme2_" + theme.title.hashCode() + "_" + LocalDate.now().toEpochDay()
+private fun themeSavedKey(theme: JoshTheme) = "theme4_" + theme.title.hashCode() + "_" + LocalDate.now().toEpochDay()
 
 /** One cover picture filling the space. */
 @Composable
@@ -724,7 +841,7 @@ fun KingsJoshScreen(navController: NavController) {
                     Text("Josh Songs", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 }
                 Text(
-                    "Josh v15 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
+                    "Josh v16 · new songs every day · ~150 songs each · shuffle on every tap · no devotional or folk",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 18.dp, bottom = 8.dp),
@@ -799,7 +916,10 @@ fun KingsJoshScreen(navController: NavController) {
                 covers = rememberCovers("bgmmix", "mass bgm", "bgm_" + LocalDate.now().toEpochDay()),
             ) { play("bgm", "BGM Music") { loadBgmMix(context) } }
         }
-        listOf("josh" to JoshThemes).forEach { (group, themes) ->
+        listOf("josh" to JoshThemes, "love" to LoveThemes).forEach { (group, themes) ->
+            if (group == "love") {
+                item(key = "love_title") { SectionTitle("Love Songs", "Only romantic songs · 60 a day · new every day") }
+            }
             themes.chunked(2).forEachIndexed { rowIndex, row ->
                 item(key = "${group}_row_$rowIndex") {
                     Row(
@@ -808,7 +928,7 @@ fun KingsJoshScreen(navController: NavController) {
                     ) {
                         row.forEachIndexed { j, theme ->
                             Box(Modifier.weight(1f)) {
-                                val color = paletteFor(rowIndex * 2 + j + if (group == "mix") 1 else 3)
+                                val color = if (group == "love") LoveColors[(rowIndex * 2 + j) % LoveColors.size] else paletteFor(rowIndex * 2 + j + 3)
                                 ThemeCard(theme, color, loading == "t_${theme.title}", width = null) {
                                     play("t_${theme.title}", theme.title) { loadTheme(context, theme) }
                                 }

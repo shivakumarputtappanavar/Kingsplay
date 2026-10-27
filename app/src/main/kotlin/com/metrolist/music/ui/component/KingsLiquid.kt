@@ -242,30 +242,58 @@ private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corne
                 val slop = viewConfiguration.touchSlop
                 val longPress = viewConfiguration.longPressTimeoutMillis
 
-                // 1) quick moves = normal scrolling, quick lift = normal tap
-                val early = withTimeoutOrNull(200L) {
+                val width = size.width.toFloat()
+                fun hide() {
+                    scope.launch { shown.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 380f)) }
+                }
+
+                // 0) touch: the glass appears under the finger at once (grows from the finger)
+                val first = targetFor(down.position, width)
+                moveTo(Rect(first.center, 0f).inflate(rowHeightPx / 3f), snap = true)
+                moveTo(first, snap = false)
+                scope.launch { shown.animateTo(0.7f, spring(dampingRatio = 0.55f, stiffness = 650f)) }
+
+                // 1) quick move = normal scrolling (the glass rides along under the finger),
+                //    quick lift = normal tap
+                val early = withTimeoutOrNull(150L) {
                     var outcome = ""
                     while (outcome.isEmpty()) {
                         val e = awaitPointerEvent(PointerEventPass.Final)
                         val c = e.changes.firstOrNull { it.id == down.id }
-                        if (c == null || !c.pressed) outcome = "up"
-                        else if (c.isConsumed || (c.position - down.position).getDistance() > slop) outcome = "moved"
+                        if (c == null || !c.pressed) {
+                            outcome = "up"
+                        } else {
+                            moveTo(targetFor(c.position, width), snap = false)
+                            if (c.isConsumed || (c.position - down.position).getDistance() > slop) outcome = "moved"
+                        }
                     }
                     outcome
                 }
-                if (early != null) return@awaitEachGesture
+                if (early == "moved") {
+                    while (true) {
+                        val e = awaitPointerEvent(PointerEventPass.Final)
+                        val c = e.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!c.pressed) break
+                        moveTo(targetFor(c.position, width), snap = false)
+                    }
+                }
+                if (early != null) {
+                    hide()
+                    return@awaitEachGesture
+                }
 
-                // 2) held still a moment: now moving the finger brings the lens
-                //    (holding still longer = normal long press)
+                // 2) held a moment: now moving the finger slides the glass (the list does not scroll).
+                //    Song lists: holding still longer = the normal long press menu.
                 var pos = down.position
-                val armed = withTimeoutOrNull((longPress - 230L).coerceAtLeast(60L)) {
+                val armTime = if (registry != null) 30_000L else (longPress - 170L).coerceAtLeast(120L)
+                val armed = withTimeoutOrNull(armTime) {
                     var outcome = ""
                     while (outcome.isEmpty()) {
                         val e = awaitPointerEvent(PointerEventPass.Initial)
                         val c = e.changes.firstOrNull { it.id == down.id }
                         if (c == null || !c.pressed) {
                             outcome = "up"
-                        } else if ((c.position - down.position).getDistance() > slop / 2f) {
+                        } else if ((c.position - down.position).getDistance() > slop / 3f) {
                             e.changes.forEach { it.consume() } // no scrolling, no long press
                             pos = c.position
                             outcome = "lens"
@@ -273,13 +301,13 @@ private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corne
                     }
                     outcome
                 }
-                if (armed != "lens") return@awaitEachGesture
+                if (armed != "lens") {
+                    hide()
+                    return@awaitEachGesture
+                }
 
                 // 3) lens mode
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                val width = size.width.toFloat()
-                val start = targetFor(down.position, width)
-                moveTo(Rect(start.center, 0f).inflate(rowHeight.toPx() / 3f), snap = true) // grows from the finger
                 moveTo(targetFor(pos, width), snap = false)
                 scope.launch { shown.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 520f)) }
                 var lastItem = itemAt(pos)
