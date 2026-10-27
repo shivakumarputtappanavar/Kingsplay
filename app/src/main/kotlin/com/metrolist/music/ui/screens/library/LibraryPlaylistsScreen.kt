@@ -315,6 +315,8 @@ fun LibraryPlaylistsScreen(
     }
 
     var showCreatePlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    // Kings Play: Import from Spotify by link
+    com.metrolist.music.ui.component.KingsSpotifyImportHost()
 
     if (showCreatePlaylistDialog) {
         CreatePlaylistDialog(
@@ -367,6 +369,7 @@ fun LibraryPlaylistsScreen(
                 color = MaterialTheme.colorScheme.secondary,
             )
 
+            com.metrolist.music.ui.component.KingsSpotifyImportButton()
             IconButton(
                 onClick = { isSearchActive = true },
                 modifier = Modifier.padding(start = 8.dp).size(40.dp),
