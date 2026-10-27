@@ -97,6 +97,11 @@ fun MoodAndGenresScreen(
             ExploreHeader()
         }
 
+        // Kings Play: daily josh mixes
+        item(key = "kings_josh_songs") {
+            KingsDailyMixesSection(title = "Josh Songs", subtitle = "Trending josh in every language - new every day")
+        }
+
         if (moodAndGenresList == null) {
             item(key = "mood_and_genres_shimmer") {
                 ShimmerHost(

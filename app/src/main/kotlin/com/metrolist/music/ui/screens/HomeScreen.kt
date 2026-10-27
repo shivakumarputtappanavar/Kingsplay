@@ -206,6 +206,8 @@ sealed class HomeSection(
     data object KingsRecents : HomeSection("kings_recents", 95)
 
     data object KingsListenTogether : HomeSection("kings_listen_together", 15)
+
+    data object KingsDailyMixes : HomeSection("kings_daily_mixes", 16)
 }
 
 @Composable
@@ -1051,6 +1053,7 @@ fun HomeScreen(
             if (!chipActive) {
                 list.add(HomeSection.KingsRecents)
                 list.add(HomeSection.KingsListenTogether)
+                list.add(HomeSection.KingsDailyMixes)
             }
 
             if (!chipActive && speedDialItems.isNotEmpty()) list.add(HomeSection.SpeedDial)
@@ -1879,6 +1882,9 @@ fun HomeScreen(
 
                         HomeSection.KingsRecents -> {
                             item(key = "kings_recents") { KingsRecentsSection() }
+                        }
+                        HomeSection.KingsDailyMixes -> {
+                            item(key = "kings_daily_mixes") { KingsDailyMixesSection() }
                         }
                         HomeSection.KingsListenTogether -> {
                             item(key = "kings_listen_together") { KingsListenTogetherCard() }

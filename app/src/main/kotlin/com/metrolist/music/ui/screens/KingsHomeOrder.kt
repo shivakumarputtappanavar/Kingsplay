@@ -70,6 +70,7 @@ enum class KingsHomeSlot(val key: String, val label: String) {
     NEW_RELEASES("new_releases", "New releases"),
     TRENDING("trending", "Trending songs for you"),
     MIXES("mixes", "Mixed playlists"),
+    DAILY_MIXES("daily_mixes", "Kings Mixes for today"),
     LISTEN_TOGETHER("listen_together", "Listen together"),
     KEEP_LISTENING("keep_listening", "Keep listening"),
     FORGOTTEN("forgotten", "Forgotten favorites"),
@@ -90,6 +91,7 @@ fun kingsHomeOrder(saved: String): List<KingsHomeSlot> {
 private fun slotOf(section: HomeSection, titles: List<String>): KingsHomeSlot = when (section) {
     HomeSection.KingsRecents -> KingsHomeSlot.RECENTS
     HomeSection.KingsListenTogether -> KingsHomeSlot.LISTEN_TOGETHER
+    HomeSection.KingsDailyMixes -> KingsHomeSlot.DAILY_MIXES
     HomeSection.SpeedDial -> KingsHomeSlot.SPEED_DIAL
     HomeSection.QuickPicks -> KingsHomeSlot.QUICK_PICKS
     HomeSection.KeepListening -> KingsHomeSlot.KEEP_LISTENING
