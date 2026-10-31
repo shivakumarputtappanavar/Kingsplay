@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Mic button background – idle state (solid accent circle) -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="@color/widget_primary_container" />
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient android:angle="135" android:startColor="#7A3CFF" android:endColor="#3D7BFF" />
+    <stroke android:width="1.5dp" android:color="#88FFFFFF" />
     <size android:width="44dp" android:height="44dp" />
 </shape>
