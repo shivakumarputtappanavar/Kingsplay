@@ -26,6 +26,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetState as rememberMaterialBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
@@ -35,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalFocusManager
@@ -116,12 +118,97 @@ fun AnimatedBottomSheet(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 3-dot menu sheet. By default it uses the dark glass look.
+ * Pass glass = false to get the old solid look back.
+ */
 @Composable
 fun BottomSheetMenu(
     modifier: Modifier = Modifier,
     state: MenuState,
     background: Color = MaterialTheme.colorScheme.surface,
+    glass: Boolean = true,
+) {
+    if (glass) {
+        KingsGlassBottomSheetMenu(modifier = modifier, state = state)
+    } else {
+        ClassicBottomSheetMenu(modifier = modifier, state = state, background = background)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun KingsGlassBottomSheetMenu(
+    modifier: Modifier,
+    state: MenuState,
+) {
+    val focusManager = LocalFocusManager.current
+    val sheetState = rememberMaterialBottomSheetState(initialValue = SheetValue.Hidden)
+
+    // Dark colours for everything inside the menu, so text and icons stay readable
+    // in both light and dark app themes.
+    val baseScheme = MaterialTheme.colorScheme
+    val glassScheme =
+        remember(baseScheme) {
+            baseScheme.copy(
+                surface = Color(0xFF16161A),
+                onSurface = KingsGlassText,
+                surfaceVariant = Color(0x24FFFFFF),
+                onSurfaceVariant = Color(0xCCFFFFFF),
+            )
+        }
+
+    AnimatedBottomSheet(
+        isVisible = state.isVisible,
+        onDismissRequest = {
+            focusManager.clearFocus()
+            state.isVisible = false
+        },
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = Color(0xE6101014),
+        contentColor = KingsGlassText,
+        scrimColor = Color.Black.copy(alpha = 0.40f),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 12.dp)
+                    .size(width = 40.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.35f))
+            )
+        },
+        modifier = modifier.fillMaxHeight()
+    ) {
+        MaterialTheme(
+            colorScheme = glassScheme,
+            typography = MaterialTheme.typography,
+            shapes = MaterialTheme.shapes,
+        ) {
+            CompositionLocalProvider(LocalKingsGlass provides true) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0x1AFFFFFF), Color.Transparent)
+                            )
+                        )
+                        .padding(horizontal = 14.dp)
+                ) {
+                    state.content(this)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ClassicBottomSheetMenu(
+    modifier: Modifier,
+    state: MenuState,
+    background: Color,
 ) {
     val focusManager = LocalFocusManager.current
     val sheetState = rememberMaterialBottomSheetState(initialValue = SheetValue.Hidden)

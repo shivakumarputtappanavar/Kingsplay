@@ -7,6 +7,7 @@ package com.metrolist.music.ui.component
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +48,9 @@ private fun NewActionButton(
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
+    val glass = LocalKingsGlass.current
+    val cornerRadius = if (glass) 20.dp else 16.dp
+
     val animatedBackground by animateColorAsState(
         targetValue = if (enabled) backgroundColor else backgroundColor.copy(alpha = 0.5f),
         animationSpec = tween(200),
@@ -71,16 +75,24 @@ private fun NewActionButton(
     Card(
         modifier =
             modifier
-                .kingsLiquidPress(16.dp)
+                .kingsLiquidPress(cornerRadius)
                 .kingsBubbleItem(bubble, text, enabled) { performAction = true }
                 .clickable(enabled = enabled) { performAction = true },
         colors =
-            CardDefaults.cardColors(
-                containerColor = animatedBackground,
-            ),
-        shape = RoundedCornerShape(16.dp),
+            if (glass) {
+                CardDefaults.cardColors(
+                    containerColor = animatedBackground,
+                    contentColor = animatedContent,
+                )
+            } else {
+                CardDefaults.cardColors(
+                    containerColor = animatedBackground,
+                )
+            },
+        shape = RoundedCornerShape(cornerRadius),
         elevation =
-            CardDefaults.cardElevation(),
+            if (glass) CardDefaults.cardElevation(defaultElevation = 0.dp) else CardDefaults.cardElevation(),
+        border = if (glass) BorderStroke(0.8.dp, KingsGlassEdgeTop) else null,
     ) {
         Column(
             modifier =

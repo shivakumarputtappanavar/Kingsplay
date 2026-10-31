@@ -6,8 +6,10 @@
 package com.metrolist.music.ui.component
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,15 +21,82 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun Material3MenuGroup(
+    items: List<Material3MenuItemData>
+) {
+    if (LocalKingsGlass.current) {
+        KingsGlassMenuGroup(items)
+    } else {
+        ClassicMenuGroup(items)
+    }
+}
+
+/** Dark glass: one rounded glass card per group, thin lines between rows. */
+@Composable
+private fun KingsGlassMenuGroup(
+    items: List<Material3MenuItemData>
+) {
+    val kingsBubble = rememberKingsBubble()
+    val shape = RoundedCornerShape(22.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .kingsGlassSurface(shape)
+            .kingsBubbleHost(kingsBubble, 22.dp)
+    ) {
+        items.forEachIndexed { index, item ->
+            if (index > 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp)
+                        .height(0.5.dp)
+                        .background(KingsGlassDivider)
+                )
+            }
+
+            val custom = item.cardColors
+            val customBackground =
+                if (custom != null && custom.containerColor != Color.Unspecified) {
+                    Modifier.background(custom.containerColor)
+                } else {
+                    Modifier
+                }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize()
+                    .kingsLiquidPress(0.dp)
+                    .kingsBubbleItem(kingsBubble, index, enabled = item.onClick != null) { item.onClick?.invoke() }
+                    .then(customBackground)
+            ) {
+                if (custom != null && custom.contentColor != Color.Unspecified) {
+                    CompositionLocalProvider(LocalContentColor provides custom.contentColor) {
+                        Material3MenuItemRow(item = item, glass = true)
+                    }
+                } else {
+                    Material3MenuItemRow(item = item, glass = true)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClassicMenuGroup(
     items: List<Material3MenuItemData>
 ) {
     val kingsBubble = rememberKingsBubble()
@@ -55,7 +124,7 @@ fun Material3MenuGroup(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Material3MenuItemRow(item = item)
+                Material3MenuItemRow(item = item, glass = false)
             }
         }
     }
@@ -63,7 +132,8 @@ fun Material3MenuGroup(
 
 @Composable
 private fun Material3MenuItemRow(
-    item: Material3MenuItemData
+    item: Material3MenuItemData,
+    glass: Boolean
 ) {
     Row(
         modifier = Modifier
@@ -72,12 +142,15 @@ private fun Material3MenuItemRow(
                 enabled = item.onClick != null,
                 onClick = { item.onClick?.invoke() }
             )
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(
+                horizontal = if (glass) 16.dp else 20.dp,
+                vertical = if (glass) 13.dp else 16.dp
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         item.icon?.let { icon ->
             icon()
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(if (glass) 14.dp else 16.dp))
         }
 
         Column(
@@ -91,7 +164,7 @@ private fun Material3MenuItemRow(
                 Spacer(modifier = Modifier.height(2.dp))
                 ProvideTextStyle(
                     MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (glass) KingsGlassTextDim else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     desc()
