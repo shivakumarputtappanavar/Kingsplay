@@ -262,7 +262,7 @@ inline fun ListItem(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = if (isActive) {
-            modifier.kingsLiquidPress(8.dp).kingsRowAppear() // playing highlight
+            modifier.kingsRowPress(8.dp).kingsRowAppear() // playing highlight
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(8.dp))
@@ -272,13 +272,13 @@ inline fun ListItem(
                         else MaterialTheme.colorScheme.secondaryContainer
                 )
         } else if (isSelected == true) {
-            modifier.kingsLiquidPress(8.dp).kingsRowAppear() // inactive selected
+            modifier.kingsRowPress(8.dp).kingsRowAppear() // inactive selected
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.4f))
         } else {
-            modifier.kingsLiquidPress(8.dp).kingsRowAppear() // default
+            modifier.kingsRowPress(8.dp).kingsRowAppear() // default
                 .height(ListItemHeight)
                 .padding(horizontal = 8.dp)
         }

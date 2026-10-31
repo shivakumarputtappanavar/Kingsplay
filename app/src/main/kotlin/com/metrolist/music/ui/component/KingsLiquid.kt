@@ -23,6 +23,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -158,7 +159,12 @@ fun Modifier.kingsBubbleHost(state: KingsBubbleState, corner: Dp = 20.dp): Modif
 /** Song lists, playlists, search results: liquid glass lens under the finger (one song row tall). */
 @Composable
 fun Modifier.kingsLiquidFollow(rowHeight: Dp = 64.dp, corner: Dp = 20.dp): Modifier =
-    kingsLens(null, rowHeight, corner)
+    kingsLens(null, rowHeight, corner, ios = true)
+
+/** Kings Play: Settings groups use the same iPhone-style glass as the song lists. */
+@Composable
+fun Modifier.kingsBubbleHostIos(state: KingsBubbleState, corner: Dp = 20.dp): Modifier =
+    kingsLens(state, 64.dp, corner, ios = true)
 
 /** Moving glass: current edges (drawn) and where they are going (targets). */
 private class LensState {
@@ -174,10 +180,18 @@ private class LensState {
 }
 
 @Composable
-private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corner: Dp): Modifier {
+private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corner: Dp, ios: Boolean = false): Modifier {
+    // Kings Play: while a song list with the iPhone glass is on screen, its rows do not squish
+    if (ios && registry == null) {
+        DisposableEffect(Unit) {
+            KingsIosLiquid.listHosts++
+            onDispose { KingsIosLiquid.listHosts-- }
+        }
+    }
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val accent = MaterialTheme.colorScheme.primary
+    val ink = MaterialTheme.colorScheme.onSurface
     val ls = remember { LensState() }
     val shown = remember { Animatable(0f) }
     var host by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -273,6 +287,11 @@ private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corne
             if (rect.width <= 1f || rect.height <= 1f) return@drawWithContent
             val r = (corner.toPx() + grow).coerceAtMost(rect.height / 2f)
             val cr = CornerRadius(r, r)
+            // Kings Play: iPhone-style glass (frosted body, bright top edge) for lists and settings
+            if (ios) {
+                drawKingsIosGlass(rect, cr, a, ink)
+                return@drawWithContent
+            }
             // clear glass body (no copy of the text inside, so nothing shows twice)
             drawRoundRect(color = Color.White.copy(alpha = 0.07f * a), topLeft = rect.topLeft, size = rect.size, cornerRadius = cr)
             // light from the top

@@ -62,7 +62,7 @@ fun Material3SettingsGroup(
 
         // Settings items
         Column(
-        modifier = Modifier.fillMaxWidth().kingsBubbleHost(kingsBubble, 24.dp),
+        modifier = Modifier.fillMaxWidth().kingsBubbleHostIos(kingsBubble, 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items.forEachIndexed { index, item ->
@@ -77,7 +77,6 @@ fun Material3SettingsGroup(
                 modifier = Modifier
                         .fillMaxWidth()
                         .animateContentSize()
-                        .kingsLiquidPress(24.dp)
                         .kingsBubbleItem(kingsBubble, index, enabled = item.enabled && item.onClick != null) { item.onClick?.invoke() },
                     shape = shape,
                     colors = CardDefaults.cardColors(
