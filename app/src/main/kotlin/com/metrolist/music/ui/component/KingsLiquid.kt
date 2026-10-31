@@ -1,23 +1,18 @@
 /**
- * Kings Play — based on Metrolist (C) 2026
+ * Kings Play â€” based on Metrolist (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
  *
  * Liquid glass touch for the whole app (like the liquid bottom bar):
- *  - kingsLiquidPress: touch a song, card, setting or the search bar and it squishes like a
- *    water drop and bounces back.
- *  - Liquid glass (song lists, search, settings, 3-dot menus): touch and a clear glass appears
- *    under your finger. Move your finger up or down and the glass moves with it (the list scrolls
- *    as normal). Lift your finger and it melts away. Taps and long presses work as normal.
+ *  - kingsLiquidPress: touch a song, card or setting and it squishes like a water drop and bounces back.
+ *  - Liquid glass lens (song lists, playlists, search, settings, 3-dot menus): touch and a glass lens
+ *    appears under your finger. The list inside the lens is magnified in the middle and squeezed at the
+ *    rim, like light bending through real glass. Move your finger and the lens moves like liquid
+ *    (the list scrolls as normal). Lift your finger and it melts away. Taps and long presses work as normal.
  */
 
 package com.metrolist.music.ui.component
 
-import android.os.SystemClock
-import android.view.InputDevice
-import android.view.MotionEvent
-import android.view.View
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -28,39 +23,39 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.exp
+import kotlin.math.min
 
 // ---------------------------------------------------------------- liquid press
 
@@ -151,20 +146,20 @@ fun Modifier.kingsBubbleItem(
     }
 }
 
-/** Settings groups and 3-dot menus: liquid glass lens that snaps onto the item under the finger. */
+/** Settings groups and 3-dot menus: glass lens that snaps onto the item under the finger. */
 @Composable
 fun Modifier.kingsBubbleHost(state: KingsBubbleState, corner: Dp = 20.dp): Modifier =
     kingsLens(state, 64.dp, corner)
 
-/** Song lists, playlists, search results: liquid glass lens under the finger (one song row tall). */
-@Composable
-fun Modifier.kingsLiquidFollow(rowHeight: Dp = 64.dp, corner: Dp = 20.dp): Modifier =
-    kingsLens(null, rowHeight, corner, ios = true)
-
-/** Kings Play: Settings groups use the same iPhone-style glass as the song lists. */
+/** Same lens (kept so earlier installers keep compiling). */
 @Composable
 fun Modifier.kingsBubbleHostIos(state: KingsBubbleState, corner: Dp = 20.dp): Modifier =
-    kingsLens(state, 64.dp, corner, ios = true)
+    kingsLens(state, 64.dp, corner)
+
+/** Song lists, playlists, search results: glass lens under the finger (one song row tall). */
+@Composable
+fun Modifier.kingsLiquidFollow(rowHeight: Dp = 64.dp, corner: Dp = 20.dp): Modifier =
+    kingsLens(null, rowHeight, corner)
 
 /** Moving glass: current edges (drawn) and where they are going (targets). */
 private class LensState {
@@ -180,17 +175,9 @@ private class LensState {
 }
 
 @Composable
-private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corner: Dp, ios: Boolean = false): Modifier {
-    // Kings Play: while a song list with the iPhone glass is on screen, its rows do not squish
-    if (ios && registry == null) {
-        DisposableEffect(Unit) {
-            KingsIosLiquid.listHosts++
-            onDispose { KingsIosLiquid.listHosts-- }
-        }
-    }
+private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corner: Dp): Modifier {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
-    val accent = MaterialTheme.colorScheme.primary
     val ink = MaterialTheme.colorScheme.onSurface
     val ls = remember { LensState() }
     val shown = remember { Animatable(0f) }
@@ -198,6 +185,15 @@ private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corne
     val density = LocalDensity.current
     val rowHeightPx = with(density) { rowHeight.toPx() }
     val insetPx = with(density) { 8.dp.toPx() }
+    val layer = rememberGraphicsLayer()
+
+    // Song lists: while a list with the glass lens is on screen, its rows do not squish
+    if (registry == null) {
+        DisposableEffect(Unit) {
+            KingsIosLiquid.listHosts++
+            onDispose { KingsIosLiquid.listHosts-- }
+        }
+    }
 
     fun itemAt(pos: Offset): Rect? {
         val h = host ?: return null
@@ -278,52 +274,42 @@ private fun Modifier.kingsLens(registry: KingsBubbleState?, rowHeight: Dp, corne
             }
         }
         .drawWithContent {
-            drawContent()
             val s = shown.value.coerceIn(0f, 1.2f)
-            if (s < 0.01f) return@drawWithContent
-            val a = s.coerceAtMost(1f)
-            val grow = 3.dp.toPx() * a
-            val rect = Rect(ls.l - grow, ls.t - grow, ls.r + grow, ls.b + grow)
-            if (rect.width <= 1f || rect.height <= 1f) return@drawWithContent
-            val r = (corner.toPx() + grow).coerceAtMost(rect.height / 2f)
-            val cr = CornerRadius(r, r)
-            // Kings Play: iPhone-style glass (frosted body, bright top edge) for lists and settings
-            if (ios) {
-                drawKingsIosGlass(rect, cr, a, ink)
+            if (s < 0.01f) {
+                drawContent()
                 return@drawWithContent
             }
-            // clear glass body (no copy of the text inside, so nothing shows twice)
-            drawRoundRect(color = Color.White.copy(alpha = 0.07f * a), topLeft = rect.topLeft, size = rect.size, cornerRadius = cr)
-            // light from the top
-            drawRoundRect(
-                brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.16f * a), Color.Transparent),
-                    startY = rect.top,
-                    endY = rect.top + rect.height * 0.55f,
-                ),
-                topLeft = rect.topLeft,
-                size = rect.size,
-                cornerRadius = cr,
-            )
-            // rainbow edges like real glass
-            val stroke = Stroke(width = 1.5.dp.toPx())
-            translate(left = -1.dp.toPx()) {
-                drawRoundRect(Color(0xFFFF4D6D).copy(alpha = 0.30f * a), rect.topLeft, rect.size, cr, style = stroke)
+            val a = s.coerceAtMost(1f)
+            val grow = 4.dp.toPx() * a
+            val rect = Rect(ls.l - grow, ls.t - grow, ls.r + grow, ls.b + grow)
+            if (rect.width <= 1f || rect.height <= 1f) {
+                drawContent()
+                return@drawWithContent
             }
-            translate(left = 1.dp.toPx()) {
-                drawRoundRect(Color(0xFF3DD6FF).copy(alpha = 0.30f * a), rect.topLeft, rect.size, cr, style = stroke)
+            val r = (corner.toPx() + grow).coerceAtMost(rect.height / 2f)
+            val cr = CornerRadius(r, r)
+            val outerPath = Path().apply { addRoundRect(RoundRect(rect, cr)) }
+            val rim = (10.dp.toPx() * a).coerceAtMost(min(rect.width, rect.height) / 3f)
+            val innerRect = rect.deflate(rim)
+            val ir = (r - rim).coerceAtLeast(2f)
+            val innerPath = Path().apply { addRoundRect(RoundRect(innerRect, CornerRadius(ir, ir))) }
+            val c = rect.center
+
+            // record the list once so the glass can show it again, magnified
+            layer.record { this@drawWithContent.drawContent() }
+
+            // the list outside the glass
+            clipPath(outerPath, ClipOp.Difference) { drawLayer(layer) }
+            // glass rim: the list is squeezed a little (light bends at the edge)
+            clipPath(outerPath) {
+                clipPath(innerPath, ClipOp.Difference) {
+                    scale(1f - 0.07f * a, c) { drawLayer(layer) }
+                }
             }
-            // bright glass rim
-            drawRoundRect(
-                brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.80f * a), accent.copy(alpha = 0.30f * a), Color.White.copy(alpha = 0.40f * a)),
-                    startY = rect.top,
-                    endY = rect.bottom,
-                ),
-                topLeft = rect.topLeft,
-                size = rect.size,
-                cornerRadius = cr,
-                style = stroke,
-            )
+            // glass centre: the list is magnified
+            clipPath(innerPath) {
+                scale(1f + 0.12f * a, c) { drawLayer(layer) }
+            }
+            drawKingsGlassBody(rect, cr, a, ink)
         }
 }

@@ -1,6 +1,5 @@
 /**
- * Kings Play - iPhone-style liquid glass for song lists (playlists, song search) and Settings groups.
- * Frosted body, bright top edge, soft rim. The glass still follows your finger like liquid.
+ * Kings Play - helpers for the liquid glass lens.
  */
 
 package com.metrolist.music.ui.component
@@ -19,46 +18,40 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** Counts the song lists that currently show the iPhone glass (rows inside them do not squish). */
+/** Counts the song lists that currently show the glass lens (rows inside them do not squish). */
 object KingsIosLiquid {
     var listHosts by mutableIntStateOf(0)
 }
 
-/** Song-row touch: the old squish, except inside a list that has the iPhone glass. */
+/** Song-row touch: the old squish, except inside a list that has the glass lens. */
 @Composable
 fun Modifier.kingsRowPress(corner: Dp = 8.dp): Modifier =
     if (KingsIosLiquid.listHosts > 0) this else kingsLiquidPress(corner)
 
-internal fun DrawScope.drawKingsIosGlass(rect: Rect, cr: CornerRadius, a: Float, ink: Color) {
-    // frosted body
+/** Glass on top of the lens: faint frosted tint, light from the top, bright rim. */
+internal fun DrawScope.drawKingsGlassBody(rect: Rect, cr: CornerRadius, a: Float, ink: Color) {
+    drawRoundRect(
+        color = ink.copy(alpha = 0.06f * a),
+        topLeft = rect.topLeft,
+        size = rect.size,
+        cornerRadius = cr,
+    )
     drawRoundRect(
         brush = Brush.verticalGradient(
-            listOf(ink.copy(alpha = 0.16f * a), ink.copy(alpha = 0.08f * a)),
+            listOf(Color.White.copy(alpha = 0.30f * a), Color.Transparent),
             startY = rect.top,
-            endY = rect.bottom,
+            endY = rect.top + rect.height * 0.45f,
         ),
         topLeft = rect.topLeft,
         size = rect.size,
         cornerRadius = cr,
     )
-    // light from the top
-    drawRoundRect(
-        brush = Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = 0.26f * a), Color.Transparent),
-            startY = rect.top,
-            endY = rect.top + rect.height * 0.5f,
-        ),
-        topLeft = rect.topLeft,
-        size = rect.size,
-        cornerRadius = cr,
-    )
-    // glass rim: bright at the top, soft in the middle, a little light at the bottom
     drawRoundRect(
         brush = Brush.verticalGradient(
             listOf(
-                Color.White.copy(alpha = 0.70f * a),
-                Color.White.copy(alpha = 0.10f * a),
-                Color.White.copy(alpha = 0.38f * a),
+                Color.White.copy(alpha = 0.85f * a),
+                Color.White.copy(alpha = 0.12f * a),
+                Color.White.copy(alpha = 0.45f * a),
             ),
             startY = rect.top,
             endY = rect.bottom,
@@ -66,6 +59,6 @@ internal fun DrawScope.drawKingsIosGlass(rect: Rect, cr: CornerRadius, a: Float,
         topLeft = rect.topLeft,
         size = rect.size,
         cornerRadius = cr,
-        style = Stroke(width = 1.dp.toPx()),
+        style = Stroke(width = 1.2.dp.toPx()),
     )
 }
