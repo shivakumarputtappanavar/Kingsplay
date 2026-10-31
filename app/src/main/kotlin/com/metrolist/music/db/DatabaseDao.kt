@@ -433,6 +433,10 @@ interface DatabaseDao {
     ): Flow<List<SongWithStats>>
 
     // Time Transfer
+    // Kings Play: live history - raise the play time of a song's newest listen
+    @Query("UPDATE event SET playTime = :playTime WHERE id = (SELECT MAX(id) FROM event WHERE songId = :songId)")
+    fun kingsSetLatestEventPlayTime(songId: String, playTime: Long)
+
     @Query("UPDATE event SET songId = :toSongId WHERE songId = :fromSongId")
     suspend fun transferEvents(fromSongId: String, toSongId: String): Int
 

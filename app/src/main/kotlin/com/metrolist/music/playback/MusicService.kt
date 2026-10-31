@@ -266,6 +266,10 @@ import java.util.Collections
 private const val INSTANT_SILENCE_SKIP_STEP_MS = 15_000L
 private const val INSTANT_SILENCE_SKIP_SETTLE_MS = 350L
 
+// Kings Play: live history - save a listen this long after the song starts, then update it this often
+private const val KINGS_LIVE_HISTORY_DELAY_MS = 5_000L
+private const val KINGS_LIVE_HISTORY_WRITE_MS = 15_000L
+
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 @AndroidEntryPoint
@@ -2507,10 +2511,89 @@ class MusicService :
         }
     }
 
+    // Kings Play: live history. A song is saved to Recents (and counted in the Library cards)
+    // a few seconds after it starts, then its play time keeps growing while it plays.
+    @Volatile private var kingsLiveSongId: String? = null
+    @Volatile private var kingsLiveSavedFor: String? = null
+    @Volatile private var kingsLiveTotalMs: Long = 0L
+    private var kingsLiveJob: Job? = null
+
+    private fun kingsIsPlaying(mediaId: String): Boolean =
+        player.isPlaying && player.currentMediaItem?.mediaId == mediaId
+
+    private fun kingsStartLiveHistory(
+        mediaItem: MediaItem?,
+        reason: Int,
+    ) {
+        val mediaId = mediaItem?.mediaId
+        val sameSongStillLive =
+            mediaId != null &&
+                mediaId == kingsLiveSongId &&
+                kingsLiveJob?.isActive == true &&
+                reason != Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
+                reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+        if (sameSongStillLive) return
+
+        kingsLiveJob?.cancel()
+        kingsLiveJob = null
+        kingsLiveSongId = null
+        if (mediaId == null) return
+        kingsLiveSongId = mediaId
+
+        kingsLiveJob =
+            scope.launch(Dispatchers.IO + SilentHandler) {
+                // wait until the song has really played for a few seconds
+                var playedMs = 0L
+                while (playedMs < KINGS_LIVE_HISTORY_DELAY_MS) {
+                    delay(500)
+                    if (withContext(Dispatchers.Main) { kingsIsPlaying(mediaId) }) playedMs += 500
+                }
+                if (dataStore.get(PauseListenHistoryKey, false)) return@launch
+
+                val kingsMeta =
+                    withContext(Dispatchers.Main) {
+                        player.currentMediaItem?.takeIf { it.mediaId == mediaId }?.metadata
+                    }
+                val firstPlayTime = playedMs
+                database.query {
+                    // songs from the phone have no database row yet; history needs one
+                    if (mediaId.startsWith("local:") && kingsMeta != null) insert(kingsMeta)
+                    try {
+                        insert(
+                            Event(
+                                songId = mediaId,
+                                timestamp = LocalDateTime.now(),
+                                playTime = firstPlayTime,
+                            ),
+                        )
+                    } catch (_: SQLException) {
+                    }
+                }
+                kingsLiveSavedFor = mediaId
+                kingsLiveTotalMs = firstPlayTime
+
+                // keep the play time growing while the song plays
+                var sinceWriteMs = 0L
+                while (true) {
+                    delay(1000)
+                    if (withContext(Dispatchers.Main) { kingsIsPlaying(mediaId) }) {
+                        kingsLiveTotalMs += 1000
+                        sinceWriteMs += 1000
+                    }
+                    if (sinceWriteMs >= KINGS_LIVE_HISTORY_WRITE_MS) {
+                        sinceWriteMs = 0L
+                        val total = kingsLiveTotalMs
+                        database.query { kingsSetLatestEventPlayTime(mediaId, total) }
+                    }
+                }
+            }
+    }
+
     override fun onMediaItemTransition(
         mediaItem: MediaItem?,
         reason: Int,
     ) {
+        kingsStartLiveHistory(mediaItem, reason)
         // Only natural completion transitions mark the previous track as fully cached,
         // never a manual skip or seek. Read lastTransitionedMediaId before replacing it.
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
@@ -4071,20 +4154,31 @@ class MusicService :
         val mediaItem = eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
         val historyDurationMs = dataStore[HistoryDuration]?.times(1000f) ?: 30000f
 
-        if (playbackStats.totalPlayTimeMs >= historyDurationMs &&
+        // Kings Play: a listen that was already saved live only needs its final play time
+        val liveSaved = kingsLiveSavedFor == mediaItem.mediaId
+        if (liveSaved) kingsLiveSavedFor = null
+        val listenedMs = maxOf(playbackStats.totalPlayTimeMs, if (liveSaved) kingsLiveTotalMs else 0L)
+
+        if ((liveSaved || playbackStats.totalPlayTimeMs >= historyDurationMs) &&
             !dataStore.get(PauseListenHistoryKey, false)
         ) {
             database.query {
                 incrementTotalPlayTime(mediaItem.mediaId, playbackStats.totalPlayTimeMs)
-                try {
-                    insert(
-                        Event(
-                            songId = mediaItem.mediaId,
-                            timestamp = LocalDateTime.now(),
-                            playTime = playbackStats.totalPlayTimeMs,
-                        ),
-                    )
-                } catch (_: SQLException) {
+                if (liveSaved) {
+                    kingsSetLatestEventPlayTime(mediaItem.mediaId, listenedMs)
+                } else {
+                    val kingsMeta = mediaItem.metadata
+                    if (mediaItem.mediaId.startsWith("local:") && kingsMeta != null) insert(kingsMeta)
+                    try {
+                        insert(
+                            Event(
+                                songId = mediaItem.mediaId,
+                                timestamp = LocalDateTime.now(),
+                                playTime = playbackStats.totalPlayTimeMs,
+                            ),
+                        )
+                    } catch (_: SQLException) {
+                    }
                 }
             }
         }

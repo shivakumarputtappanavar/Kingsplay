@@ -113,9 +113,15 @@ fun KingsLibraryOverview(
 
     val playlists by playlistsViewModel.allPlaylists.collectAsStateWithLifecycle()
     val artists by artistsViewModel.allArtists.collectAsStateWithLifecycle()
-    val topSongs by statsViewModel.mostPlayedSongsStats.collectAsStateWithLifecycle()
-    val topArtists by statsViewModel.mostPlayedArtists.collectAsStateWithLifecycle()
-    val topAlbums by statsViewModel.mostPlayedAlbums.collectAsStateWithLifecycle()
+    // Kings Play: live cards - all-time numbers that refresh while songs play
+    val kingsFrom = remember { java.time.LocalDateTime.of(1970, 1, 1, 0, 0) }
+    val kingsTo = remember { java.time.LocalDateTime.of(2100, 1, 1, 0, 0) }
+    val topSongs by remember { database.mostPlayedSongsStats(kingsFrom, 1000, 0, kingsTo) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val topArtists by remember { database.mostPlayedArtists(kingsFrom, 100, 0, kingsTo) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val topAlbums by remember { database.mostPlayedAlbums(kingsFrom, 100, 0, kingsTo) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     val firstEvent by statsViewModel.firstEvent.collectAsStateWithLifecycle()
     val downloaded by database.downloadedSongsByCreateDateAsc().collectAsStateWithLifecycle(initialValue = emptyList())
     val accountName by rememberPreference(AccountNameKey, "")
