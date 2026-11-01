@@ -1,14 +1,17 @@
 /**
  * Metrolist Project (C) 2026
  * Licensed under GPL-3.0 | See git history for contributors
+ *
+ * Kings Play v19: each settings group is one rounded glass card with thin lines between rows.
+ * Works in light and dark themes. A still highlight shows on the row you press (nothing follows the finger).
  */
 
 package com.metrolist.music.ui.component
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,8 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -31,8 +32,31 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
+
+/** Soft glass card that fits the current theme (light or dark). */
+@Composable
+private fun Modifier.kingsSettingsGlass(shape: Shape, lowContrast: Boolean): Modifier {
+    val ink = MaterialTheme.colorScheme.onSurface
+    val low = MaterialTheme.colorScheme.surfaceContainerLow
+    val fill =
+        if (lowContrast) {
+            Brush.verticalGradient(listOf(low, low))
+        } else {
+            Brush.verticalGradient(listOf(ink.copy(alpha = 0.10f), ink.copy(alpha = 0.05f)))
+        }
+    return this
+        .clip(shape)
+        .background(fill)
+        .border(
+            width = 0.8.dp,
+            brush = Brush.verticalGradient(listOf(ink.copy(alpha = 0.22f), ink.copy(alpha = 0.07f))),
+            shape = shape,
+        )
+}
 
 /**
  * A Material 3 Expressive style settings group component
@@ -45,7 +69,8 @@ fun Material3SettingsGroup(
     items: List<Material3SettingsItem>,
     useLowContrast: Boolean = false
 ) {
-    val kingsBubble = rememberKingsBubble()
+    val shape = RoundedCornerShape(22.dp)
+    val ink = MaterialTheme.colorScheme.onSurface
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -60,33 +85,29 @@ fun Material3SettingsGroup(
             )
         }
 
-        // Settings items
+        // One glass card for the whole group
         Column(
-        modifier = Modifier.fillMaxWidth().kingsBubbleHostIos(kingsBubble, 24.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .kingsSettingsGlass(shape, useLowContrast)
         ) {
             items.forEachIndexed { index, item ->
-                val shape = when {
-                    items.size == 1 -> RoundedCornerShape(24.dp)
-                    index == 0 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 6.dp, bottomEnd = 6.dp)
-                    index == items.size - 1 -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-                    else -> RoundedCornerShape(6.dp)
+                if (index > 0) {
+                    val hasLeading = item.leadingContent != null || item.icon != null
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = if (hasLeading) 76.dp else 20.dp)
+                            .height(0.5.dp)
+                            .background(ink.copy(alpha = 0.10f))
+                    )
                 }
 
-                Card(
-                modifier = Modifier
+                Box(
+                    modifier = Modifier
                         .fillMaxWidth()
                         .animateContentSize()
-                        .kingsBubbleItem(kingsBubble, index, enabled = item.enabled && item.onClick != null) { item.onClick?.invoke() },
-                    shape = shape,
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (!useLowContrast) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerLow
-                        }
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        .kingsLiquidPress(0.dp)
                 ) {
                     Material3SettingsItemRow(item = item)
                 }
@@ -109,7 +130,7 @@ private fun Material3SettingsItemRow(
                 enabled = item.enabled && item.onClick != null,
                 onClick = { item.onClick?.invoke() }
             )
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Custom leading content or Icon with background
@@ -173,7 +194,7 @@ private fun Material3SettingsItemRow(
             // Title content
             ProvideTextStyle(
                 MaterialTheme.typography.titleMedium.copy(
-                    color = if (!item.enabled) 
+                    color = if (!item.enabled)
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     else
                         MaterialTheme.colorScheme.onSurface
