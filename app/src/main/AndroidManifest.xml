@@ -407,6 +407,40 @@
             </intent-filter>
         </service>
 
+            <!-- Kings Play glass widgets -->
+        <receiver
+            android:name=".widget.KgIdentifyWidgetReceiver"
+            android:exported="true"
+            android:label="Kings Identify Song">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/kg_identify_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.KgMiniWidgetReceiver"
+            android:exported="true"
+            android:label="Kings Mini Player">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/kg_mini_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.KgPillWidgetReceiver"
+            android:exported="true"
+            android:label="Kings Play Pill">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/kg_pill_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

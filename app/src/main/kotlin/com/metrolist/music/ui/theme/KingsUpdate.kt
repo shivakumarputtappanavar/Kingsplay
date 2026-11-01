@@ -9,7 +9,7 @@
  * To publish an update:
  *   1. Change KingsPlayVersion below (for example "1.2")
  *   2. Build the APK
- *   3. On GitHub, create a new release with tag v1.2 and attach the APK
+ *   3. On GitHub, create a new release with tag v1.3 and attach the APK
  * Everyone on an older version then sees the message.
  */
 
@@ -61,7 +61,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** The version of THIS build. Change it before every new release. */
-const val KingsPlayVersion = "1.2"
+const val KingsPlayVersion = "1.3"
 
 private const val KingsReleasesApi =
     "https://api.github.com/repos/ShivakumarPuttappanavar/Kingsplay/releases/latest"
@@ -92,7 +92,7 @@ object KingsUpdateState {
     var downloadedFile: File? = null
 }
 
-/** "1.10" > "1.9", "v1.2" == "1.2". */
+/** "1.10" > "1.9", "v1.3" == "1.2". */
 fun isNewerVersion(remote: String, local: String = KingsPlayVersion): Boolean {
     fun parts(v: String) = v.trim().removePrefix("v").removePrefix("V")
         .split('.', '-', ' ').mapNotNull { it.toIntOrNull() }

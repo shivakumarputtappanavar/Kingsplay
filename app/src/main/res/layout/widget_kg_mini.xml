@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/kg_mini_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/kg_widget_glass_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <ImageView
+        android:id="@+id/kg_mini_art"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/kg_cover_default" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/kg_mini_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Play your music"
+            android:textColor="#FFFFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/kg_mini_artist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Kings Play"
+            android:textColor="#FFB9B3D9"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/kg_mini_prev"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:contentDescription="@null"
+        android:padding="7dp"
+        android:src="@drawable/kg_ic_prev_white" />
+
+    <ImageView
+        android:id="@+id/kg_mini_play"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:contentDescription="@null"
+        android:padding="7dp"
+        android:src="@drawable/kg_ic_play_white" />
+
+    <ImageView
+        android:id="@+id/kg_mini_next"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:contentDescription="@null"
+        android:padding="7dp"
+        android:src="@drawable/kg_ic_next_white" />
+</LinearLayout>

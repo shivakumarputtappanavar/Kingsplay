@@ -110,6 +110,7 @@ class MetrolistWidgetManager @Inject constructor(
             }
         }
 
+        KingsGlassWidgets.update(context, title, artist, albumArt, isPlaying)
         playlistWidgetManager.updateWidgets(
             title = title,
             artist = artist,
