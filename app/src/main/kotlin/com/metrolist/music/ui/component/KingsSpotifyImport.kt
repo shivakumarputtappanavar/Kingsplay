@@ -186,6 +186,7 @@ fun KingsSpotifyImportHost() {
         )
     }
 
+    KingsKeepScreenOn(showChoosePlaylist)
     AddToPlaylistDialogOnline(
         isVisible = showChoosePlaylist,
         allowSyncing = false,
@@ -236,6 +237,7 @@ private fun KingsSpotifyLinkDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                KingsSpotifyFileButton(enabled = !loading) { fileTitle, fileTracks -> onLoaded(fileTitle, fileTracks) }
                 if (loading) {
                     CircularProgressIndicator(modifier = Modifier.size(28.dp))
                 }

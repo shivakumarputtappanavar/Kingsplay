@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -77,6 +79,15 @@
             <intent-filter>
                 <action android:name="com.metrolist.music.action.RECOGNITION" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <!-- Kings Play Listen Together link: kingsplay://listen?code=XXXX (room QR code) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kingsplay" />
+                <data android:host="listen" />
             </intent-filter>
 
             <!-- Listen Together invite link -->

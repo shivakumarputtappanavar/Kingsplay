@@ -157,7 +157,7 @@ fun KingsRecentsSection() {
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 10.dp),
         )
-        LazyRow(contentPadding = PaddingValues(horizontal = 10.dp)) {
+        com.metrolist.music.ui.component.KingsTiltRow(contentPadding = PaddingValues(horizontal = 10.dp)) {
             itemsIndexed(songs, key = { _, s -> "kings_recent_${s.id}" }) { index, song ->
                 KingsQuickPickCard(
                     song = song,

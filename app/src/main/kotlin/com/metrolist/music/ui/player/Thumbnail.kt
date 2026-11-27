@@ -570,10 +570,7 @@ private fun ThumbnailItem(
                     item.mediaMetadata.artworkUri?.toString()
                 }
 
-                ThumbnailImage(
-                    artworkUri = artworkUriToUse,
-                    cropArtwork = cropAlbumArt
-                )
+                ThumbnailImage(artworkUri = artworkUriToUse, cropArtwork = cropAlbumArt, title = item.mediaMetadata.title?.toString(), artist = item.mediaMetadata.artist?.toString())
             }
             
             // Cast button at top-right corner of thumbnail
@@ -619,6 +616,8 @@ private fun ThumbnailImage(
     cropArtwork: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val hdUri = com.metrolist.music.ui.component.kingsHdCover(artworkUri)
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -628,17 +627,42 @@ private fun ThumbnailImage(
             }
             .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
+        // soft colour fill from the same cover, so the whole picture can show with no bars
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+            model = ImageRequest.Builder(context)
+                .data(artworkUri)
+                .size(48, 48)
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        // the cover as before: shows at once, and stays if no bigger version exists
+        AsyncImage(
+            model = ImageRequest.Builder(context)
                 .data(artworkUri)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .networkCachePolicy(CachePolicy.ENABLED)
                 .build(),
             contentDescription = null,
-            contentScale = if (cropArtwork) ContentScale.Crop else ContentScale.Fit,
+            contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )
+        // the big, sharp version drawn on top when it has loaded (whole picture, never cropped)
+        if (hdUri != null && hdUri != artworkUri) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(hdUri)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
 

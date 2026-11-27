@@ -411,12 +411,12 @@ fun GridItem(
     Column(
         modifier = if (fillMaxWidth) {
             modifier
-                .kingsLiquidPress(20.dp)
+                .kingsLiquidPress(20.dp).kingsHomeTilt()
                 .padding(12.dp)
                 .fillMaxWidth()
         } else {
             modifier
-                .kingsLiquidPress(20.dp)
+                .kingsLiquidPress(20.dp).kingsHomeTilt()
                 .padding(12.dp)
                 .width(gridHeight * thumbnailRatio)
         }

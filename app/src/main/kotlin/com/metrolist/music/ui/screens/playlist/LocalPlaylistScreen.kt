@@ -553,6 +553,16 @@ fun LocalPlaylistScreen(
 
             val displayedSongs = if (isSearching) filteredSongs else mutableSongs
 
+            item(key = "kings_add_and_recommend") {
+                if (!isSearching) {
+                    com.metrolist.music.ui.component.KingsPlaylistExtras(
+                        playlistId = viewModel.playlistId,
+                        seedIds = songs.map { it.song.id },
+                        existingIds = songs.map { it.song.id }.toSet(),
+                    )
+                }
+            }
+
             itemsIndexed(
                 items = displayedSongs,
                 key = { _, song -> song.map.id },

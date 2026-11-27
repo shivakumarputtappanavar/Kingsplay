@@ -1218,7 +1218,7 @@ fun HomeScreen(
                 if (isLoading && homePage?.chips.isNullOrEmpty()) {
                     item(key = "chips_shimmer") {
                         ShimmerHost(showGradient = false) {
-                            LazyRow(
+                            com.metrolist.music.ui.component.KingsTiltRow(
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1252,7 +1252,7 @@ fun HomeScreen(
                         }
 
                         item(key = "00_your_shows_list") {
-                            LazyRow(
+                            com.metrolist.music.ui.component.KingsTiltRow(
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1277,7 +1277,7 @@ fun HomeScreen(
                         }
 
                         item(key = "00_episodes_for_later_list") {
-                            LazyRow(
+                            com.metrolist.music.ui.component.KingsTiltRow(
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1300,7 +1300,7 @@ fun HomeScreen(
                         }
 
                         item(key = "0_podcast_channels_list") {
-                            LazyRow(
+                            com.metrolist.music.ui.component.KingsTiltRow(
                                 contentPadding =
                                     WindowInsets.systemBars
                                         .only(WindowInsetsSides.Horizontal)
@@ -1373,7 +1373,7 @@ fun HomeScreen(
                             }
 
                             item(key = "1_chip_section_list_${section.index}") {
-                                LazyRow(
+                                com.metrolist.music.ui.component.KingsTiltRow(
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)
@@ -1880,7 +1880,8 @@ fun HomeScreen(
                         }
 
                         HomeSection.KingsRecents -> {
-                            item(key = "kings_recents") { KingsRecentsSection() }
+                            item(key = "kings_coverflow") { com.metrolist.music.ui.component.KingsCoverflowHome() }
+                item(key = "kings_recents") { }
                         }
                         HomeSection.KingsDailyMixes -> {
                             item(key = "kings_daily_mixes") { KingsDailyMixesSection() }
@@ -1897,35 +1898,59 @@ fun HomeScreen(
                                 }
 
                                 item(key = "community_playlists_content") {
-                                    LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    ) {
-                                        items(playlists) { item ->
-                                            CommunityPlaylistCard(
-                                                item = item,
-                                                onClick = {
-                                                    navController.navigate("online_playlist/${item.playlist.id.removePrefix("VL")}")
-                                                },
-                                                onSongClick = { song ->
-                                                    if (!isListenTogetherGuest) {
-                                                        playerConnection.playQueue(
-                                                            YouTubeQueue(
-                                                                song.endpoint ?: WatchEndpoint(videoId = song.id),
-                                                                song.toMediaMetadata(),
-                                                            ),
-                                                        )
-                                                    }
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
+    val kgCards = remember(playlists) {
+        playlists.map { item ->
+            com.metrolist.music.ui.component.KgCard(
+                key = item.playlist.id,
+                thumbnail = item.playlist.thumbnail,
+                title = item.playlist.title,
+                subtitle = item.playlist.author?.name.orEmpty(),
+                onClick = { navController.navigate("online_playlist/${item.playlist.id.removePrefix("VL")}") },
+            )
+        }
+    }
+    com.metrolist.music.ui.component.KingsCarouselPanel(cards = kgCards)
+}
                             }
                         }
 
                         HomeSection.DailyDiscover -> {
                             dailyDiscover?.takeIf { it.isNotEmpty() }?.let { discoverList ->
+                                item(key = "kings_daily_mix") {
+                                    val kgMix = remember(discoverList) {
+                                        discoverList
+                                            .mapNotNull { (it.recommendation as? SongItem)?.toMediaMetadata() }
+                                            .distinctBy { it.id }
+                                            .take(40)
+                                    }
+                                    if (kgMix.size >= 5) {
+                                        com.metrolist.music.ui.component.KingsDailyMixCard(
+                                            covers = kgMix.map { it.thumbnailUrl },
+                                            count = kgMix.size,
+                                            onPlay = {
+                                                playerConnection.playQueue(
+                                                    ListQueue(
+                                                        title = "Daily mix",
+                                                        items = kgMix.map { it.toMediaItem() },
+                                                    )
+                                                )
+                                            },
+                                            onSave = {
+                                                scope.launch(Dispatchers.IO) {
+                                                    val kgPlaylist = PlaylistEntity(name = "Daily mix " + java.time.LocalDate.now())
+                                                    database.withTransaction {
+                                                        insert(kgPlaylist)
+                                                        kgMix.onEach { insert(it) }
+                                                    }
+                                                    val kgCreated = database.playlistBlocking(kgPlaylist.id)
+                                                    if (kgCreated != null) {
+                                                        database.addSongsToPlaylist(kgCreated, kgMix.map { it.id to it.setVideoId })
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    }
+                                }
                                 item(key = "daily_discover_title") {
                                     val title = stringResource(R.string.your_daily_discover)
                                     NavigationTitle(
@@ -1948,54 +1973,32 @@ fun HomeScreen(
                                     )
                                 }
 
-                                item(key = "daily_discover_content") {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(340.dp)
-                                                .padding(horizontal = 16.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        val carouselState = rememberCarouselState { discoverList.size }
-                                        HorizontalMultiBrowseCarousel(
-                                            state = carouselState,
-                                            preferredItemWidth = 320.dp,
-                                            itemSpacing = 16.dp,
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .height(320.dp),
-                                        ) { i ->
-                                            val item = discoverList[i]
-                                            DailyDiscoverCard(
-                                                dailyDiscover = item,
-                                                onClick = {
-                                                    if (!isListenTogetherGuest) {
-                                                        val song = item.recommendation as? SongItem
-                                                        val mediaMetadata = song?.toMediaMetadata()
-                                                        if (mediaMetadata != null) {
-                                                            playerConnection.playQueue(
-                                                                if (autoRadioQueue) {
-                                                                    YouTubeQueue(
-                                                                        song.endpoint ?: WatchEndpoint(videoId = song.id),
-                                                                        mediaMetadata,
-                                                                    )
-                                                                } else {
-                                                                    ListQueue(
-                                                                        title = song.title,
-                                                                        items = listOf(song.toMediaItem())
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                    }
-                                                },
-                                                modifier = Modifier.maskClip(MaterialTheme.shapes.extraLarge),
-                                            )
-                                        }
-                                    }
-                                }
+                                item(key = "daily_discover_content") { /* kingsDailyDiscoverDone */
+    val kgCards = remember(discoverList) {
+        com.metrolist.music.ui.component.kingsYtCards(
+            items = discoverList.map { it.recommendation }.distinctBy { it.id },
+            onSong = { song ->
+                if (!isListenTogetherGuest) {
+                    playerConnection.playQueue(
+                        if (autoRadioQueue) {
+                            YouTubeQueue(
+                                song.endpoint ?: WatchEndpoint(videoId = song.id),
+                                song.toMediaMetadata(),
+                            )
+                        } else {
+                            ListQueue(
+                                title = song.title,
+                                items = listOf(song.toMediaItem())
+                            )
+                        }
+                    )
+                }
+            },
+            onOther = { },
+        )
+    }
+    com.metrolist.music.ui.component.KingsCarouselPanel(cards = kgCards)
+}
                             }
                         }
 
@@ -2008,34 +2011,41 @@ fun HomeScreen(
                                 }
 
                                 item(key = "keep_listening_list") {
-                                    val rows = if (keepListening.size > 6) 2 else 1
-                                    LazyHorizontalGrid(
-                                        state = remember("keep_listening_grid") { LazyGridState() },
-                                        rows = GridCells.Fixed(rows),
-                                        contentPadding =
-                                            WindowInsets.systemBars
-                                                .only(WindowInsetsSides.Horizontal)
-                                                .asPaddingValues(),
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(
-                                                    (
-                                                        currentGridHeight +
-                                                            with(LocalDensity.current) {
-                                                                MaterialTheme.typography.bodyLarge.lineHeight
-                                                                    .toDp() * 2 +
-                                                                    MaterialTheme.typography.bodyMedium.lineHeight
-                                                                        .toDp() * 2
-                                                            }
-                                                    ) * rows,
-                                                ),
-                                    ) {
-                                        items(keepListening.distinctBy { it.id }, key = { "home_keep_listening_${it.id}" }) {
-                                            localGridItem(it)
-                                        }
-                                    }
-                                }
+    val kgKeep = remember(keepListening) {
+        keepListening.distinctBy { it.id }.filter { it !is Playlist }
+    }
+    val kgKeepSongs = remember(kgKeep) { kgKeep.filterIsInstance<Song>() }
+    val kgCards = remember(kgKeep) {
+        kgKeep.map { kgItem ->
+            com.metrolist.music.ui.component.KgCard(
+                key = kgItem.id,
+                thumbnail = kgItem.thumbnailUrl,
+                title = kgItem.title,
+                subtitle = when (kgItem) {
+                    is Song -> kgItem.artists.joinToString(", ") { it.name }
+                    is Album -> "Album"
+                    is Artist -> "Artist"
+                    else -> ""
+                },
+                onClick = {
+                    when (kgItem) {
+                        is Song -> playerConnection.playQueue(
+                            ListQueue(
+                                title = "Keep listening",
+                                items = kgKeepSongs.map { it.toMediaItem() },
+                                startIndex = kgKeepSongs.indexOf(kgItem).coerceAtLeast(0),
+                            )
+                        )
+                        is Album -> navController.navigate("album/${kgItem.id}")
+                        is Artist -> navController.navigate("artist/${kgItem.id}")
+                        else -> {}
+                    }
+                },
+            )
+        }
+    }
+    com.metrolist.music.ui.component.KingsCarouselPanel(cards = kgCards)
+}
                             }
                         }
 
@@ -2080,7 +2090,7 @@ fun HomeScreen(
                                 }
 
                                 item(key = "account_playlists_list") {
-                                    LazyRow(
+                                    com.metrolist.music.ui.component.KingsTiltRow(
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2120,94 +2130,19 @@ fun HomeScreen(
                                 }
 
                                 item(key = "forgotten_favorites_list") {
-                                    // take min in case list size is less than 4
-                                    val rows = min(4, forgottenFavorites.size)
-                                    LazyHorizontalGrid(
-                                        state = forgottenFavoritesLazyGridState,
-                                        rows = GridCells.Fixed(rows),
-                                        contentPadding =
-                                            WindowInsets.systemBars
-                                                .only(WindowInsetsSides.Horizontal)
-                                                .asPaddingValues(),
-                                        flingBehavior =
-                                            rememberSnapFlingBehavior(
-                                                forgottenFavoritesSnapLayoutInfoProvider,
-                                            ),
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(ListItemHeight * rows),
-                                        ) {
-                                            items(
-                                                items = forgottenFavorites.distinctBy { it.id },
-                                                key = { "home_forgotten_${it.id}" },
-                                            ) { originalSong ->
-                                            val song by database
-                                                .song(originalSong.id)
-                                                .collectAsStateWithLifecycle(initialValue = originalSong)
-
-                                            SongListItem(
-                                                song = song!!,
-                                                showInLibraryIcon = true,
-                                                isActive = song!!.id == mediaMetadata?.id,
-                                                isPlaying = isPlaying,
-                                                isSwipeable = false,
-                                                trailingContent = {
-                                                    IconButton(
-                                                        onClick = {
-                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            menuState.show {
-                                                                SongMenu(
-                                                                    originalSong = song!!,
-                                                                    onDismiss = menuState::dismiss,
-                                                                )
-                                                            }
-                                                        },
-                                                    ) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.more_vert),
-                                                            contentDescription = null,
-                                                        )
-                                                    }
-                                                },
-                                                modifier =
-                                                    Modifier
-                                                        .width(horizontalLazyGridItemWidth)
-                                                        .combinedClickable(
-                                                            onClick = {
-                                                                if (!isListenTogetherGuest) {
-                                                                    if (song!!.id == mediaMetadata?.id) {
-                                                                        playerConnection.togglePlayPause()
-                                                                    } else {
-                                                                        playerConnection.playQueue(
-                                                                            if (autoRadioQueue) {
-                                                                                YouTubeQueue.radio(
-                                                                                    song!!.toMediaMetadata(),
-                                                                                )
-                                                                            } else {
-                                                                                ListQueue(
-                                                                                    title = song!!.title,
-                                                                                    items = listOf(song!!.toMediaItem())
-                                                                                )
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                }
-                                                            },
-                                                            onLongClick = {
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                menuState.show {
-                                                                    SongMenu(
-                                                                        originalSong = song!!,
-                                                                        onDismiss = menuState::dismiss,
-                                                                    )
-                                                                }
-                                                            },
-                                                        ),
-                                            )
-                                        }
-                                    }
-                                }
+    val kgCards = remember(forgottenFavorites) {
+        com.metrolist.music.ui.component.kingsSongCards(forgottenFavorites.distinctBy { it.id }) { list, index ->
+            playerConnection.playQueue(
+                ListQueue(
+                    title = "Forgotten favorites",
+                    items = list.map { it.toMediaItem() },
+                    startIndex = index,
+                )
+            )
+        }
+    }
+    com.metrolist.music.ui.component.KingsCarouselPanel(cards = kgCards)
+}
                             }
                         }
 
@@ -2260,7 +2195,7 @@ fun HomeScreen(
                                 }
 
                                 item(key = "similar_to_list_${section.index}") {
-                                    LazyRow(
+                                    com.metrolist.music.ui.component.KingsTiltRow(
                                         contentPadding =
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
@@ -2360,96 +2295,67 @@ fun HomeScreen(
                                 if (isSongsOnlySection) {
                                     // Render songs as a horizontal scrollable list (like Quick picks in YouTube Music)
                                     item(key = "home_section_list_${section.index}") {
-                                        LazyHorizontalGrid(
-                                            state = remember("section_${section.index}_grid") { LazyGridState() },
-                                            rows = GridCells.Fixed(1),
-                                            contentPadding =
-                                                WindowInsets.systemBars
-                                                    .only(WindowInsetsSides.Horizontal)
-                                                    .asPaddingValues(),
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .height(com.metrolist.music.ui.component.KingsQuickPickHeight),
-                                        ) {
-                                            items(
-                                                items = sectionSongs.distinctBy { it.id },
-                                                key = { "home_section_${section.index}_song_${it.id}" },
-                                            ) { song ->
-                                                com.metrolist.music.ui.component.KingsYTSongCard(
-                                                    item = song,
-                                                    isActive = song.id == mediaMetadata?.id,
-                                                    isPlaying = isPlaying,
-                                                    isSwipeable = false,
-                                                    trailingContent = {
-                                                        IconButton(
-                                                            onClick = {
-                                                                menuState.show {
-                                                                    YouTubeSongMenu(
-                                                                        song = song,
-                                                                        onDismiss = menuState::dismiss,
-                                                                    )
-                                                                }
-                                                            },
-                                                        ) {
-                                                            Icon(
-                                                                painter = painterResource(R.drawable.more_vert),
-                                                                contentDescription = null,
-                                                            )
-                                                        }
-                                                    },
-                                                    modifier =
-                                                        Modifier
-                                                            .width(com.metrolist.music.ui.component.KingsQuickPickWidth)
-                                                            .combinedClickable(
-                                                                onClick = {
-                                                                    if (!isListenTogetherGuest) {
-                                                                        playerConnection.playQueue(
-                                                                            if (autoRadioQueue) {
-                                                                                YouTubeQueue(
-                                                                                    song.endpoint ?: WatchEndpoint(videoId = song.id),
-                                                                                    song.toMediaMetadata(),
-                                                                                )
-                                                                            } else {
-                                                                                ListQueue(
-                                                                                    title = song.title,
-                                                                                    items = listOf(song.toMediaItem())
-                                                                                )
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                },
-                                                                onLongClick = {
-                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                                    menuState.show {
-                                                                        YouTubeSongMenu(
-                                                                            song = song,
-                                                                            onDismiss = menuState::dismiss,
-                                                                        )
-                                                                    }
-                                                                },
-                                                            ),
-                                                )
-                                            }
-                                        }
-                                    }
+    val kgCards = remember(sectionSongs) {
+        com.metrolist.music.ui.component.kingsYtCards(
+            items = sectionSongs.distinctBy { it.id },
+            onSong = { song ->
+                if (!isListenTogetherGuest) {
+                    playerConnection.playQueue(
+                        if (autoRadioQueue) {
+                            YouTubeQueue(
+                                song.endpoint ?: WatchEndpoint(videoId = song.id),
+                                song.toMediaMetadata(),
+                            )
+                        } else {
+                            ListQueue(
+                                title = song.title,
+                                items = listOf(song.toMediaItem())
+                            )
+                        }
+                    )
+                }
+            },
+            onOther = { },
+        )
+    }
+    com.metrolist.music.ui.component.KingsCarouselPanel(cards = kgCards)
+}
                                 } else {
                                     // Render mixed content as horizontal grid items (albums, playlists, artists, etc.)
                                     item(key = "home_section_list_${section.index}") {
-                                        LazyRow(
-                                            contentPadding =
-                                                WindowInsets.systemBars
-                                                    .only(WindowInsetsSides.Horizontal)
-                                                    .asPaddingValues(),
-                                        ) {
-                                            items(
-                                                items = sectionData.items.distinctBy { it.id },
-                                                key = { "home_section_${section.index}_item_${it.id}" },
-                                            ) { item ->
-                                                ytGridItem(item)
-                                            }
-                                        }
-                                    }
+    val kgItems = remember(sectionData) { sectionData.items.distinctBy { it.id } }
+    val kgCards = remember(kgItems) {
+        com.metrolist.music.ui.component.kingsYtCards(
+            items = kgItems,
+            onSong = { song ->
+                if (!isListenTogetherGuest) {
+                    playerConnection.playQueue(
+                        if (autoRadioQueue) {
+                            YouTubeQueue(
+                                song.endpoint ?: WatchEndpoint(videoId = song.id),
+                                song.toMediaMetadata(),
+                            )
+                        } else {
+                            ListQueue(
+                                title = song.title,
+                                items = listOf(song.toMediaItem())
+                            )
+                        }
+                    )
+                }
+            },
+            onOther = { other ->
+                when (other) {
+                    is com.metrolist.innertube.models.AlbumItem -> navController.navigate("album/${other.id}")
+                    is com.metrolist.innertube.models.ArtistItem -> navController.navigate("artist/${other.id}")
+                    is com.metrolist.innertube.models.PlaylistItem -> navController.navigate("online_playlist/${other.id.removePrefix("VL")}")
+                    else -> {}
+                }
+            },
+        )
+    }
+    com.metrolist.music.ui.component.KingsCarouselPanel(cards = kgCards)
+}
                                 }
                             }
                         }
@@ -2510,7 +2416,7 @@ fun HomeScreen(
                                             .padding(12.dp)
                                             .width(250.dp),
                                 )
-                                LazyRow(
+                                com.metrolist.music.ui.component.KingsTiltRow(
                                     contentPadding =
                                         WindowInsets.systemBars
                                             .only(WindowInsetsSides.Horizontal)

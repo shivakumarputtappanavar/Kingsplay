@@ -281,6 +281,11 @@ dependencies {
     implementation(libs.coil)
     implementation(libs.coil.network.okhttp)
     implementation(libs.browser)
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+    implementation(libs.zxing.core)
 
     implementation(libs.ucrop)
 

@@ -60,7 +60,7 @@ fun KingsQuickPickCard(
     Column(modifier = modifier.padding(horizontal = 6.dp)) {
         Box(
             modifier = Modifier
-                .kingsCoverGlow(rememberCoverGlowColor(song.song.thumbnailUrl), 14.dp)
+                .kingsHomeTilt().kingsCoverGlow(rememberCoverGlowColor(song.song.thumbnailUrl), 14.dp)
                 .size(150.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -157,7 +157,7 @@ fun KingsYTSongCard(
     Column(modifier = modifier.padding(horizontal = 6.dp)) {
         Box(
             modifier = Modifier
-                .kingsCoverGlow(rememberCoverGlowColor(item.thumbnail), 14.dp)
+                .kingsHomeTilt().kingsCoverGlow(rememberCoverGlowColor(item.thumbnail), 14.dp)
                 .size(150.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -233,4 +233,4 @@ fun KingsYTSongCard(
 /** Soft glow in the cover's colour behind any Home card (albums, playlists, new releases). */
 @Composable
 fun kingsCardGlow(url: String?, corner: Dp = 16.dp): Modifier =
-    Modifier.kingsCoverGlow(rememberCoverGlowColor(url), corner, strength = 0.8f)
+    Modifier.kingsHomeTilt().kingsCoverGlow(rememberCoverGlowColor(url), corner, strength = 0.8f)

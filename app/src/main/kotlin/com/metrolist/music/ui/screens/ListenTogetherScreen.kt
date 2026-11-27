@@ -699,6 +699,9 @@ private fun RoomStatusCard(
                     remember(roomCode) {
                         "https://metrolist.cc/listen?code=$roomCode"
                     }
+                Spacer(modifier = Modifier.height(12.dp))
+                com.metrolist.music.ui.component.KingsRoomQr("kingsplay://listen?code=$roomCode")
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
@@ -1114,6 +1117,9 @@ private fun JoinCreateRoomSection(
                         .fillMaxWidth()
                         .onFocusChanged { if (it.isFocused) onFieldFocused() },
             )
+
+            // Scan the room QR code (fills the room code)
+            com.metrolist.music.ui.component.KingsQrScanButton(onCode = { onRoomCodeChange(it) })
 
             // Room code input
             OutlinedTextField(
