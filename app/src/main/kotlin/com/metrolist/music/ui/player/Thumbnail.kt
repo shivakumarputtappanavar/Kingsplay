@@ -614,56 +614,16 @@ private fun HiddenThumbnailPlaceholder(
 private fun ThumbnailImage(
     artworkUri: String?,
     cropArtwork: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    artist: String? = null,
 ) {
-    val context = LocalContext.current
-    val hdUri = com.metrolist.music.ui.component.kingsHdCover(artworkUri)
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                // Use offscreen compositing for hardware acceleration during animations
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        // soft colour fill from the same cover, so the whole picture can show with no bars
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(artworkUri)
-                .size(48, 48)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        // the cover as before: shows at once, and stays if no bigger version exists
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(artworkUri)
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .networkCachePolicy(CachePolicy.ENABLED)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize()
-        )
-        // the big, sharp version drawn on top when it has loaded (whole picture, never cropped)
-        if (hdUri != null && hdUri != artworkUri) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(hdUri)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .networkCachePolicy(CachePolicy.ENABLED)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
+    com.metrolist.music.ui.component.KingsCoverLayers(
+        artworkUri = artworkUri,
+        title = title,
+        artist = artist,
+        modifier = modifier,
+    )
 }
 
 /**
